@@ -142,9 +142,7 @@ function createActor(actor, name, speed) {
 function getHit(target1, target2) {
   // Function that executes when collision 
   // between target1 and target2 occurs.
-  let target1FeetY = parseInt(target1.y + target1.body.sourceHeight/2);
-  let targetHeadY = parseInt(target2.y - target2.body.sourceHeight/2);
-  if (target1FeetY <= targetHeadY + 4) {
+  if (target2.body.touching.up) {
     // target1 is above target2 (headstomp)
     this.sound.play('punch');
     parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
@@ -308,23 +306,30 @@ function create() {
   player.hasPunched = false;
   player.punchCoolDown = 0;
   player.punchAnimPlay = 0;
-  player.hb = [];
+  player.hb = [];  // Array for pointers to the health bar images.
   player.addScore = (points) => {
     player.score += points;
     textObjects.playerScore.forEach((img, i) => {
       img.setTexture('fontmap', player.getScore()[i].charCodeAt(0) - 32);
     });
-  }
+  };
   // Player health bar:
   for (let i = 0; i < player.health; i++) {
     let pos = config.width - 8 - (i * 16);
     player.hb.unshift(this.add.image(pos, 8, 'heart'));
   }
 
-  player.stun = function() {
+  player.stun = () => {
     player.stunned = true;
     let timerFunc = () => {player.stunned = false;}
     var timer = parentThis.time.delayedCall(200, timerFunc);
+  }
+
+  player.punch = () => {
+    parentThis.sound.play('punch');
+    player.addScore(10);
+    player.punchCoolDown = 5;
+    player.hasPunched = true;
   }
 
   this.physics.add.collider(player, platforms);
@@ -405,10 +410,7 @@ function update() {
 
     if (cursors.a.isDown && player.punchCoolDown == 0) {
       if (!player.hasPunched) {
-        this.sound.play('punch');
-        player.addScore(10);
-        player.punchCoolDown = 5;
-        player.hasPunched = true;
+        player.punch();
       }
     }
     else if (cursors.a.isUp) {
