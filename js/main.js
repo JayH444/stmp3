@@ -22,6 +22,45 @@ const config = {
   },
 };
 
+// Initialization for pixel scaling:
+
+function init() {
+  game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
+  game.scale.setUserScale(4, 4);
+  // enable crisp rendering
+  game.renderer.renderSession.roundPixels = true;
+  Phaser.Canvas.setImageRenderingCrisp(this.game.canvas);
+}
+
+// Main game functions & loop:
+
+function preload() {
+
+  //Images and sound effects:
+  this.load.image('sky', 'assets/sky.png');
+  this.load.image('platform', 'assets/platform.png');
+  this.load.image('scoreboard', 'assets/scoreboard.png');
+  this.load.image('heart', 'assets/heart.png');
+  this.load.image('punchbox', 'assets/punchcollisionbox.png');
+
+  // Font spritesheet uses ASCII values minus 32.
+  this.load.spritesheet('fontmap', 'assets/font.png', 
+    {frameWidth: 8, frameHeight: 8}
+  );
+  // Player spritesheet:
+  this.load.spritesheet('player', 'assets/dude.png', 
+    {frameWidth: 16, frameHeight: 16}
+  );
+  // Zombie spritesheet:
+  this.load.spritesheet('zombie', 'assets/zombie.png',
+    {frameWidth: 16, frameHeight: 16}
+  );
+
+  // Sound effects:
+  this.load.audio('jump', 'sfx/jump.wav');
+  this.load.audio('punch', 'sfx/punch1.wav');
+}
+
 // Global vars:
 
 let showDebug = false;
@@ -71,9 +110,9 @@ function createActor(actor, name, speed) {
   // Mixin for creating general actor methods and properties.
   actor.name = name;
   actor.body.setGravityY(500);
-  actor.body.setSize(10, 16);
+  actor.body.setSize(8, 16);
   actor.drag = 0.25;
-  actor.velocityDecay = 0.5
+  actor.velocityDecay = 0.5;
   actor.speed = speed;
   actor.alive = true;
   actor.health = 3;
@@ -173,41 +212,44 @@ function getHit(target1, target2) {
     target1.setVelocityY(-250);
   } 
   else {
-    target1.setVelocityY(-150);
-    if (!target1.stunned) {
-      // Stuns target1 so they can't move and don't take further damage.
-      this.sound.play('punch');
-      target1.health--;
-      if (target1.hb.length) {
-        target1.hb[0].destroy();
-        target1.hb.shift();
+    if (!target2.stunned) {
+      // target1 can't get hit if target2 is stunned.
+      target1.setVelocityY(-150);
+      if (!target1.stunned) {
+        // Stuns target1 so they can't move and don't take further damage.
+        this.sound.play('punch');
+        target1.health--;
+        if (target1.hb.length) {
+          target1.hb[0].destroy();
+          target1.hb.shift();
+        }
       }
-    }
-    target1.stun(this);
-    let velocity = 400;
-    if (target1.body.velocity.x < 0) {
-      // target1 is moving left...
-      target1.body.velocity.x = velocity;
-    }
-    else if (target1.body.velocity.x > 0) {
-      // target1 is moving right...
-      target1.body.velocity.x = -velocity;
-    }
-    else {
-      // e.g. if target1 is standing still
-      // and target2 walks into them.
-      // Throws target1 back.
-      target1.body.velocity.x = (target2.flipX) ? velocity : -velocity;
-    }
-    if (target1.health <= 0) {
-      target1.body.velocity.x *= -1;
-      // Disables collision with target1:
-      for (let collider in target1.colliders) {
-        parentThis.physics.world.removeCollider(target1.colliders[collider]);
+      target1.stun(200000000000);  // ...Why isn't this working???
+      let velocity = 400;
+      if (target1.body.velocity.x < 0) {
+        // target1 is moving left...
+        target1.body.velocity.x = velocity;
       }
-      // Destroys the contents of colliders since target1 is dead:
-      target1.colliders = {};
-      target1.die();
+      else if (target1.body.velocity.x > 0) {
+        // target1 is moving right...
+        target1.body.velocity.x = -velocity;
+      }
+      else {
+        // e.g. if target1 is standing still
+        // and target2 walks into them.
+        // Throws target1 back.
+        target1.body.velocity.x = (target2.flipX) ? velocity : -velocity;
+      }
+      if (target1.health <= 0) {
+        target1.body.velocity.x *= -1;
+        // Disables collision with target1:
+        for (let collider in target1.colliders) {
+          parentThis.physics.world.removeCollider(target1.colliders[collider]);
+        }
+        // Destroys the contents of colliders since target1 is dead:
+        target1.colliders = {};
+        target1.die();
+      }
     }
   }
 }
@@ -262,16 +304,17 @@ function createZombie(startPosX=true) {
     player.colliders[zed.id] = zed.collider;
   }
   zed.getHit = (target1, target2) => {
+    target1.stun(400);
     target1.setVelocityY(-150);
     let velocity = 400;
     target1.body.velocity.x = (target1.flipX) ? velocity : -velocity;
-    target1.stun(200);
     target2.destroy();
     target1.health -= 2;
     if (target1.health <= 0) {
       parentThis.physics.world.removeCollider(zed.collider);
       parentThis.physics.world.removeCollider(zed.punchCollider);
       target1.die();
+      player.addScore(100);
     }
   }
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
@@ -280,45 +323,6 @@ function createZombie(startPosX=true) {
 }
 
 let debugMenu = new debuggingMenu();
-
-// Initialization for pixel scaling:
-
-function init() {
-  game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
-  game.scale.setUserScale(4, 4);
-  // enable crisp rendering
-  game.renderer.renderSession.roundPixels = true;
-  Phaser.Canvas.setImageRenderingCrisp(this.game.canvas);
-}
-
-// Main game functions & loop:
-
-function preload() {
-
-  //Images and sound effects:
-  this.load.image('sky', 'assets/sky.png');
-  this.load.image('platform', 'assets/platform.png');
-  this.load.image('scoreboard', 'assets/scoreboard.png');
-  this.load.image('heart', 'assets/heart.png');
-  this.load.image('punchbox', 'assets/punchcollisionbox.png');
-
-  // Font spritesheet uses ASCII values minus 32.
-  this.load.spritesheet('fontmap', 'assets/font.png', 
-    {frameWidth: 8, frameHeight: 8}
-  );
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-
-  // Sound effects:
-  this.load.audio('jump', 'sfx/jump.wav');
-  this.load.audio('punch', 'sfx/punch1.wav');
-}
 
 function create() {
   parentThis = this;
@@ -340,8 +344,10 @@ function create() {
   player.holdingJump = false;
   player.holdingPunch = false;
   player.hasPunched = false;
-  player.punchCoolDown = 0;
-  player.punchAnimPlay = 0;
+  player.punchAnimPlay = false;
+  player.punchCoolingDown = false;
+  // Invulnerability period after getting hit (in ms):
+  player.invulPeriod = 3000;
   player.hb = [];  // Array for pointers to the health bar images.
   player.addScore = (points) => {
     player.score += points;
@@ -363,12 +369,15 @@ function create() {
 
   player.punch = () => {
     parentThis.sound.play('punch');
-    player.addScore(10);
-    player.punchCoolDown = 5;
+    player.anims.play('playerPunch');
     player.hasPunched = true;
+    player.punchAnimPlay = true;
+    player.punchCoolingDown = true;
+    parentThis.time.delayedCall(100, () => player.punchAnimPlay = false);
+    parentThis.time.delayedCall(200, () => player.punchCoolingDown = false);
     let CollisionX = (player.flipX) ? player.x - 10 : player.x + 10;
     let punchbox = punchboxes.create(CollisionX, player.y, 'punchbox');
-    parentThis.time.delayedCall(50, () => punchbox.destroy());
+    parentThis.time.delayedCall(100, () => punchbox.destroy());
   }
 
   this.physics.add.collider(player, platforms);
@@ -401,12 +410,6 @@ function create() {
 
   let zombieSpawner = setInterval(createZombie, 3000);
 
-}
-
-function update() {
-  parentThis = this;
-  randBool = Phaser.Math.Between(0, 1);
-
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
     up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -417,17 +420,21 @@ function update() {
     a: Phaser.Input.Keyboard.KeyCodes.CTRL,
     pause: Phaser.Input.Keyboard.KeyCodes.P
   });
+}
+
+function update() {
+  parentThis = this;
+  randBool = Phaser.Math.Between(0, 1);
 
   // Player input and animations conditionals:
   if (player.alive) {
     if (!(cursors.left.isDown && cursors.right.isDown)) {
-      player.inAir = player.body.touching.down && cursors.a.isDown
-      if (cursors.left.isDown && !player.inAir) {
+      if (cursors.left.isDown) {
         player.moveX(-player.speed, player.drag);
         player.flipX = true;
         player.anims.play('playerMove', true);
       }
-      else if (cursors.right.isDown && !player.inAir) {
+      else if (cursors.right.isDown) {
         player.moveX(player.speed, player.drag);
         player.flipX = false;
         player.anims.play('playerMove', true);
@@ -444,24 +451,18 @@ function update() {
       player.anims.play('playerJump');
     }
 
-    if (cursors.a.isDown && player.punchCoolDown == 0) {
+    if (cursors.a.isDown) {
       if (!player.hasPunched) {
         player.punch();
       }
     }
-    else if (cursors.a.isUp) {
-      if (player.hasPunched) {
-        player.punchCoolDown--;
-        if (player.punchCoolDown <= 0) {
-          player.hasPunched = false;
-          player.punchAnimPlay = 0;
-        }
-      }
+    else if (cursors.a.isUp && !player.punchCoolingDown) {
+      player.hasPunched = false;
     }
-    if (player.hasPunched && player.punchAnimPlay < 7) {
+    if (player.punchAnimPlay) {
       player.anims.play('playerPunch');
-      player.punchAnimPlay++;
     }
+
     var onGround = player.body.touching.down;
     if (cursors.b.isDown && onGround && !player.holdingJump) {
       player.setVelocityY(-300);
