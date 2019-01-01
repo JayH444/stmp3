@@ -1,5 +1,5 @@
 // Todo: clean up code (more functional/OOP), add level tilemap and
-// level generation, add health pickups, add coins.
+// level generation, add health pickups, add coins, fix run-punching.
 
 // Phaser configuration:
 const config = {
@@ -117,6 +117,11 @@ function createActor(actor, name, speed) {
   actor.alive = true;
   actor.health = 3;
   actor.stunned = false;
+  actor.invulnerable = false;
+  actor.flickerTimer = 0;
+  actor.destroyed = false;
+  // Invulnerability period after getting hit (in ms):
+  actor.invulPeriod = 1500;
   // Animation speed scales with actor's movement speed:
   actor.animSpeed = parseInt(0.09375 * actor.speed);
 
@@ -152,13 +157,28 @@ function createActor(actor, name, speed) {
     actor.health = 0;
     actor.anims.play(actor.name + 'Die');
     if (actor.collision) actor.collision.destroy();
+    parentThis.time.delayedCall(1000, () => actor.destroyed = true);
+    parentThis.time.delayedCall(3000, () => actor.destroy());
   }
 
-  actor.stun = (time) => {
+  actor.stun = (time, invulnerable=false) => {
     actor.stunned = true;
     parentThis.time.delayedCall(time, () => actor.stunned = false);
+    if (invulnerable) {
+      parentThis.time.delayedCall(50, () => actor.invulnerable = true);
+      let a = [actor.invulPeriod, () => actor.invulnerable = false]
+      parentThis.time.delayedCall(...a);
+    }
   }
 
+  actor.flicker = () => {
+    if (actor.flickerTimer == 0) {
+      actor.visible = !actor.visible;
+      actor.flickerTimer = 4;
+    } else {
+      actor.flickerTimer--;
+    }
+  }
 
   if (!parentThis.anims.get(actor.name + 'Move')) {
     // If the animation object doesn't already 
@@ -209,11 +229,14 @@ function getHit(target1, target2) {
     }
     parentThis.physics.world.removeCollider(target2.punchCollider);
     target2.die();
+    zombiesAlive--;
+    console.log(zombiesAlive);
     target1.setVelocityY(-250);
   } 
   else {
-    if (!target2.stunned) {
-      // target1 can't get hit if target2 is stunned.
+    if (!target2.stunned && !target1.invulnerable && !target1.isPunching) {
+      // target1 can't get hit if target2 is stunned, 
+      // or if target1 is invulnerable
       target1.setVelocityY(-150);
       if (!target1.stunned) {
         // Stuns target1 so they can't move and don't take further damage.
@@ -224,7 +247,7 @@ function getHit(target1, target2) {
           target1.hb.shift();
         }
       }
-      target1.stun(200000000000);  // ...Why isn't this working???
+      target1.stun(200, true);
       let velocity = 400;
       if (target1.body.velocity.x < 0) {
         // target1 is moving left...
@@ -256,7 +279,12 @@ function getHit(target1, target2) {
 
 zombies = [];
 zombieUsedIDs = [];
+zombiesAlive = 0;
 function createZombie(startPosX=true) {
+  // Prevents more than five zombies at a time from spawning:
+  if (zombiesAlive >= 10) return;
+  zombiesAlive++;
+  console.log(zombiesAlive);
   if (startPosX === true) {
     startPosX = (randBool) ? -32 : config.width + 32;
   }
@@ -291,7 +319,9 @@ function createZombie(startPosX=true) {
       }
     }
     else {
-        zed.decayVelocityX();
+        if (!zed.destroyed) {
+          zed.decayVelocityX();
+        }
     }
   }
   createActor(zed, 'zombie', 40, parentThis);
@@ -306,16 +336,15 @@ function createZombie(startPosX=true) {
   zed.getHit = (target1, target2) => {
     target1.stun(400);
     target1.setVelocityY(-150);
-    let velocity = 400;
+    let velocity = 400 + Math.abs(player.body.velocity.x)*2;
     target1.body.velocity.x = (target1.flipX) ? velocity : -velocity;
     target2.destroy();
-    target1.health -= 2;
-    if (target1.health <= 0) {
-      parentThis.physics.world.removeCollider(zed.collider);
-      parentThis.physics.world.removeCollider(zed.punchCollider);
-      target1.die();
-      player.addScore(100);
-    }
+    parentThis.physics.world.removeCollider(zed.collider);
+    parentThis.physics.world.removeCollider(zed.punchCollider);
+    target1.die();
+    zombiesAlive--;
+    console.log(zombiesAlive);
+    player.addScore(100);
   }
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);  
@@ -334,7 +363,7 @@ function create() {
   platforms.create(centerX, config.height - 8, 'platform');
   platforms.create(centerX, 8, 'scoreboard');
 
-  // Actor stuff & animations:
+  // Actor stuff:
 
   player = this.physics.add.sprite(centerX, config.height - 24, 'player');
   createActor(player, 'player', 160, this);
@@ -343,11 +372,9 @@ function create() {
   player.getScore = () => player.score.toString().padStart(7, "0");
   player.holdingJump = false;
   player.holdingPunch = false;
-  player.hasPunched = false;
+  player.isPunching = false;
   player.punchAnimPlay = false;
   player.punchCoolingDown = false;
-  // Invulnerability period after getting hit (in ms):
-  player.invulPeriod = 3000;
   player.hb = [];  // Array for pointers to the health bar images.
   player.addScore = (points) => {
     player.score += points;
@@ -361,16 +388,10 @@ function create() {
     player.hb.unshift(this.add.image(pos, 8, 'heart'));
   }
 
-  player.stun = () => {
-    player.stunned = true;
-    let timerFunc = () => {player.stunned = false;}
-    var timer = parentThis.time.delayedCall(200, timerFunc);
-  }
-
   player.punch = () => {
     parentThis.sound.play('punch');
     player.anims.play('playerPunch');
-    player.hasPunched = true;
+    player.isPunching = true;
     player.punchAnimPlay = true;
     player.punchCoolingDown = true;
     parentThis.time.delayedCall(100, () => player.punchAnimPlay = false);
@@ -408,8 +429,6 @@ function create() {
     textObjects[i[3]] = wordImages;
   }
 
-  let zombieSpawner = setInterval(createZombie, 3000);
-
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
     up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -420,6 +439,8 @@ function create() {
     a: Phaser.Input.Keyboard.KeyCodes.CTRL,
     pause: Phaser.Input.Keyboard.KeyCodes.P
   });
+
+  let zombieSpawner = setInterval(createZombie, 3000);
 }
 
 function update() {
@@ -452,12 +473,12 @@ function update() {
     }
 
     if (cursors.a.isDown) {
-      if (!player.hasPunched) {
+      if (!player.isPunching) {
         player.punch();
       }
     }
     else if (cursors.a.isUp && !player.punchCoolingDown) {
-      player.hasPunched = false;
+      player.isPunching = false;
     }
     if (player.punchAnimPlay) {
       player.anims.play('playerPunch');
@@ -471,6 +492,12 @@ function update() {
     }
     else if (cursors.b.isUp) {
       player.holdingJump = false;
+    }
+
+    if (player.invulnerable) {
+      player.flicker();
+    } else {
+      player.visible = true;
     }
   }
   else {
