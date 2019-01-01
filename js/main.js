@@ -32,6 +32,7 @@ let centerY = config.height/2;
 let player;
 let zombies;
 let platforms;
+let punchboxes;
 let cursors;
 let parentThis;
 let randBool = true;
@@ -72,13 +73,20 @@ function createActor(actor, name, speed) {
   actor.body.setGravityY(500);
   actor.body.setSize(10, 16);
   actor.drag = 0.25;
+  actor.velocityDecay = 0.5
   actor.speed = speed;
   actor.alive = true;
   actor.health = 3;
+  actor.stunned = false;
   // Animation speed scales with actor's movement speed:
   actor.animSpeed = parseInt(0.09375 * actor.speed);
 
-  actor.decayVelocityX = (arg) => {  // Actor velocity decay from drag.
+  actor.goIdle = (arg) => {
+    actor.decayVelocityX(arg);
+    actor.anims.play(actor.name + 'Idle');
+  }
+
+  actor.decayVelocityX = (arg=0.5) => {  // Actor velocity decay from drag.
     decayRatio = arg;
     if (!actor.body.touching.down) {  // Less drag if actor in air.
       decayRatio *= 1.75;
@@ -87,10 +95,16 @@ function createActor(actor, name, speed) {
   }
 
   actor.moveX = (speed, inertia) => {
-    if (Math.abs(actor.body.velocity.x) < Math.abs(speed)) {
-      actor.body.velocity.x += (speed * inertia);
-    } else {
-      actor.body.velocity.x = speed;
+    if (!actor.stunned) {
+      if (Math.abs(actor.body.velocity.x) < Math.abs(speed)) {
+        actor.body.velocity.x += (speed * inertia);
+      } 
+      else {
+        actor.body.velocity.x = speed;
+      }
+    }
+    else {
+      actor.decayVelocityX();
     }
   }
 
@@ -99,6 +113,11 @@ function createActor(actor, name, speed) {
     actor.health = 0;
     actor.anims.play(actor.name + 'Die');
     if (actor.collision) actor.collision.destroy();
+  }
+
+  actor.stun = (time) => {
+    actor.stunned = true;
+    parentThis.time.delayedCall(time, () => actor.stunned = false);
   }
 
 
@@ -149,6 +168,7 @@ function getHit(target1, target2) {
     if (target1.hasOwnProperty('addScore')) {
       target1.addScore(100);
     }
+    parentThis.physics.world.removeCollider(target2.punchCollider);
     target2.die();
     target1.setVelocityY(-250);
   } 
@@ -224,12 +244,12 @@ function createZombie(startPosX=true) {
         zed.anims.play('zombieMove', true);
       }
       else {
-        zed.decayVelocityX(0.5);
+        zed.decayVelocityX();
         zed.anims.play('zombieIdle', true);
       }
     }
     else {
-        zed.decayVelocityX(0.5);
+        zed.decayVelocityX();
     }
   }
   createActor(zed, 'zombie', 40, parentThis);
@@ -241,6 +261,21 @@ function createZombie(startPosX=true) {
     zed.collider = parentThis.physics.add.overlap(...zed.collisionArgs);
     player.colliders[zed.id] = zed.collider;
   }
+  zed.getHit = (target1, target2) => {
+    target1.setVelocityY(-150);
+    let velocity = 400;
+    target1.body.velocity.x = (target1.flipX) ? velocity : -velocity;
+    target1.stun(200);
+    target2.destroy();
+    target1.health -= 2;
+    if (target1.health <= 0) {
+      parentThis.physics.world.removeCollider(zed.collider);
+      parentThis.physics.world.removeCollider(zed.punchCollider);
+      target1.die();
+    }
+  }
+  zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
+  zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);  
   zombies.push(zed);
 }
 
@@ -265,6 +300,7 @@ function preload() {
   this.load.image('platform', 'assets/platform.png');
   this.load.image('scoreboard', 'assets/scoreboard.png');
   this.load.image('heart', 'assets/heart.png');
+  this.load.image('punchbox', 'assets/punchcollisionbox.png');
 
   // Font spritesheet uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/font.png', 
@@ -290,6 +326,7 @@ function create() {
   this.bg = this.add.tileSprite(0, 0, 800, 600, 'sky');
 
   platforms = this.physics.add.staticGroup();
+  punchboxes = this.physics.add.staticGroup();
   platforms.create(centerX, config.height - 8, 'platform');
   platforms.create(centerX, 8, 'scoreboard');
 
@@ -302,7 +339,6 @@ function create() {
   player.getScore = () => player.score.toString().padStart(7, "0");
   player.holdingJump = false;
   player.holdingPunch = false;
-  player.stunned = false;
   player.hasPunched = false;
   player.punchCoolDown = 0;
   player.punchAnimPlay = 0;
@@ -330,10 +366,12 @@ function create() {
     player.addScore(10);
     player.punchCoolDown = 5;
     player.hasPunched = true;
+    let CollisionX = (player.flipX) ? player.x - 10 : player.x + 10;
+    let punchbox = punchboxes.create(CollisionX, player.y, 'punchbox');
+    parentThis.time.delayedCall(50, () => punchbox.destroy());
   }
 
   this.physics.add.collider(player, platforms);
-  //this.physics.add.collider(zombie, platforms);
 
   // Collision detection for player and zombies:
   player.colliders = {};
@@ -382,7 +420,7 @@ function update() {
 
   // Player input and animations conditionals:
   if (player.alive) {
-    if (!(cursors.left.isDown && cursors.right.isDown) && !player.stunned) {
+    if (!(cursors.left.isDown && cursors.right.isDown)) {
       player.inAir = player.body.touching.down && cursors.a.isDown
       if (cursors.left.isDown && !player.inAir) {
         player.moveX(-player.speed, player.drag);
@@ -395,13 +433,11 @@ function update() {
         player.anims.play('playerMove', true);
       }
       else {
-        player.decayVelocityX(0.5);
-        player.anims.play('playerIdle');
+        player.goIdle();
       }
     }
     else {
-      player.decayVelocityX(0.5);
-      player.anims.play('playerIdle');
+      player.goIdle();
     }
 
     if (!player.body.touching.down) {
