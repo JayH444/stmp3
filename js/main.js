@@ -82,6 +82,9 @@ let textObjects = {};  // Object for storing the displayed texts.
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
 
+// Becomes true if a destroyed zombie is detected in the zombies array:
+let zombiesFilter = false;
+
 // Global functions:
 
 function printText(str, x, y, id) {
@@ -131,6 +134,7 @@ function createActor(actor, name, speed) {
   }
 
   actor.decayVelocityX = (arg=0.5) => {  // Actor velocity decay from drag.
+    if (actor.destroyed) return;
     decayRatio = arg;
     if (!actor.body.touching.down) {  // Less drag if actor in air.
       decayRatio *= 1.75;
@@ -139,6 +143,7 @@ function createActor(actor, name, speed) {
   }
 
   actor.moveX = (speed, inertia) => {
+    if (actor.destroyed) return;
     if (!actor.stunned) {
       if (Math.abs(actor.body.velocity.x) < Math.abs(speed)) {
         actor.body.velocity.x += (speed * inertia);
@@ -158,7 +163,7 @@ function createActor(actor, name, speed) {
     actor.anims.play(actor.name + 'Die');
     if (actor.collision) actor.collision.destroy();
     parentThis.time.delayedCall(1000, () => actor.destroyed = true);
-    parentThis.time.delayedCall(3000, () => actor.destroy());
+    parentThis.time.delayedCall(5000, () => actor.destroy());
   }
 
   actor.stun = (time, invulnerable=false) => {
@@ -230,11 +235,10 @@ function getHit(target1, target2) {
     parentThis.physics.world.removeCollider(target2.punchCollider);
     target2.die();
     zombiesAlive--;
-    console.log(zombiesAlive);
     target1.setVelocityY(-250);
   } 
   else {
-    if (!target2.stunned && !target1.invulnerable && !target1.isPunching) {
+    if (!target2.stunned && !target1.invulnerable && !target1.punchAnimPlay) {
       // target1 can't get hit if target2 is stunned, 
       // or if target1 is invulnerable
       target1.setVelocityY(-150);
@@ -284,7 +288,6 @@ function createZombie(startPosX=true) {
   // Prevents more than five zombies at a time from spawning:
   if (zombiesAlive >= 10) return;
   zombiesAlive++;
-  console.log(zombiesAlive);
   if (startPosX === true) {
     startPosX = (randBool) ? -32 : config.width + 32;
   }
@@ -343,12 +346,12 @@ function createZombie(startPosX=true) {
     parentThis.physics.world.removeCollider(zed.punchCollider);
     target1.die();
     zombiesAlive--;
-    console.log(zombiesAlive);
     player.addScore(100);
   }
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);  
   zombies.push(zed);
+  console.log(zombies.length);
 }
 
 let debugMenu = new debuggingMenu();
@@ -504,8 +507,15 @@ function update() {
     player.decayVelocityX(0.55);
   }
 
-  for (let zombie of zombies) {
+  zombies.forEach((zombie) => {
+    if (zombie.destroyed && !zombiesFilter) {
+      zombiesFilter = true;
+    }
     zombie.move(zombie.x, player.x);
+  });
+
+  if (zombiesFilter) {
+    zombies = zombies.filter(x => x.destroyed == false);
   }
 
   if (showDebug) {
