@@ -281,11 +281,12 @@ function getHit(target1, target2) {
   }
 }
 
+// Array for storing alive zombies to be iterated over for movement:
 zombies = [];
 zombieUsedIDs = [];
 zombiesAlive = 0;
 function createZombie(startPosX=true) {
-  // Prevents more than five zombies at a time from spawning:
+  // Prevents more than ten zombies at a time from spawning:
   if (zombiesAlive >= 10) return;
   zombiesAlive++;
   if (startPosX === true) {
@@ -337,6 +338,7 @@ function createZombie(startPosX=true) {
     player.colliders[zed.id] = zed.collider;
   }
   zed.getHit = (target1, target2) => {
+    // When a zombie gets hit, e.g. by a punch.
     target1.stun(400);
     target1.setVelocityY(-150);
     let velocity = 400 + Math.abs(player.body.velocity.x)*2;
@@ -348,10 +350,12 @@ function createZombie(startPosX=true) {
     zombiesAlive--;
     player.addScore(100);
   }
+  // Adding punch collision:
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
-  zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);  
+  zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);
   zombies.push(zed);
-  console.log(zombies.length);
+  //console.log(zombies.length);
+  //console.log(zombieUsedIDs.length);
 }
 
 let debugMenu = new debuggingMenu();
@@ -510,12 +514,19 @@ function update() {
   zombies.forEach((zombie) => {
     if (zombie.destroyed && !zombiesFilter) {
       zombiesFilter = true;
+      let ZedIdIndex = zombieUsedIDs.indexOf(zombie.id);
+      console.log(ZedIdIndex);
+      // Removes dead zombie ID from used IDs:
+      zombieUsedIDs.splice(ZedIdIndex, 1);
+    } else {
+      zombie.move(zombie.x, player.x);
     }
-    zombie.move(zombie.x, player.x);
   });
 
   if (zombiesFilter) {
+    // Cleanup for dead zombies in the zombies array.
     zombies = zombies.filter(x => x.destroyed == false);
+    zombiesFilter = false;
   }
 
   if (showDebug) {
