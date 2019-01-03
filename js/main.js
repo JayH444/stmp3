@@ -1,5 +1,5 @@
 // Todo: clean up code (more functional/OOP), add level tilemap and
-// level generation, add health pickups, add coins, fix run-punching.
+// level generation, add health pickups, add coins.
 
 // Phaser configuration:
 const config = {
@@ -22,7 +22,9 @@ const config = {
   },
 };
 
+
 // Initialization for pixel scaling:
+
 
 function init() {
   game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
@@ -32,13 +34,16 @@ function init() {
   Phaser.Canvas.setImageRenderingCrisp(this.game.canvas);
 }
 
+
 // Main game functions & loop:
+
 
 function preload() {
 
   //Images and sound effects:
   this.load.image('sky', 'assets/sky.png');
-  this.load.image('platform', 'assets/platform.png');
+  this.load.image('groundgrass', 'assets/groundgrass.png');
+  this.load.image('ground', 'assets/ground.png');
   this.load.image('scoreboard', 'assets/scoreboard.png');
   this.load.image('heart', 'assets/heart.png');
   this.load.image('punchbox', 'assets/punchcollisionbox.png');
@@ -61,6 +66,7 @@ function preload() {
   this.load.audio('punch', 'sfx/punch1.wav');
 }
 
+
 // Global vars:
 
 let showDebug = false;
@@ -73,6 +79,7 @@ let zombies;
 let platforms;
 let punchboxes;
 let cursors;
+let paused = false;
 let parentThis;
 let randBool = true;
 let textArr = [];  // Array for storing texts to be displayed on screen.
@@ -85,12 +92,15 @@ let textObjects = {};  // Object for storing the displayed texts.
 // Becomes true if a destroyed zombie is detected in the zombies array:
 let zombiesFilter = false;
 
+
 // Global functions:
+
 
 function printText(str, x, y, id) {
   // Adds a text element to be displayed.
   textArr.push([str, x, y, id]);
 }
+
 
 function destroyText(key) {
   // Removes a text element.
@@ -100,6 +110,7 @@ function destroyText(key) {
   delete textObjects[key];
 }
 
+
 function debuggingMenu() {
   // Constructor for creating a debug menu.
   let dbMenu = document.getElementById("debug-menu"); 
@@ -108,6 +119,7 @@ function debuggingMenu() {
     dbMenu.children[1].innerHTML = 'Player Y: ' + Math.round(player.y*10)/10;
   };
 }
+
 
 function createActor(actor, name, speed) {  
   // Mixin for creating general actor methods and properties.
@@ -222,6 +234,7 @@ function createActor(actor, name, speed) {
   }
 }
 
+
 function getHit(target1, target2) {
   // Function that executes when collision 
   // between target1 and target2 occurs.
@@ -281,16 +294,19 @@ function getHit(target1, target2) {
   }
 }
 
+
 // Array for storing alive zombies to be iterated over for movement:
 zombies = [];
 zombieUsedIDs = [];
 zombiesAlive = 0;
+
+
 function createZombie(startPosX=true) {
   // Prevents more than ten zombies at a time from spawning:
   if (zombiesAlive >= 10) return;
   zombiesAlive++;
   if (startPosX === true) {
-    startPosX = (randBool) ? -32 : config.width + 32;
+    startPosX = (randBool) ? -16 : config.width + 16;
   }
   let spriteArgs = [startPosX, config.height - 24, 'zombie'];
   let zed = parentThis.physics.add.sprite(...spriteArgs);
@@ -354,11 +370,51 @@ function createZombie(startPosX=true) {
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);
   zombies.push(zed);
-  //console.log(zombies.length);
-  //console.log(zombieUsedIDs.length);
 }
 
+
 let debugMenu = new debuggingMenu();
+
+// Tilemap for the level:
+
+/*
+  Levels consist of an array from 15 strings forming the rows,
+  where each character represents a 16x16 pixel tile. 
+  There are 24 columns total, 20 of which are visible.
+  The remaining 4 are for offscreen things like zombie spawners
+  and offscreen platforms for the zombies to stand on.
+
+  Legend:
+  
+  Scoreboard = s,
+  Ground w/ grass = g,
+  Ground w/o grass (rocks) = r,
+  Nothing (sky) = n
+ 
+ */
+
+let level = [
+  'ssssssssssssssssssssss',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnngggggnnnn',
+  'nnnnnnnnnnnggrrnnnnnnn',
+  'nnnnnnnnnngrnnnnnnnnnn',
+  'nnnnnngnnnnnnnnnnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnn',
+  'gggggggggggggggggggggg'
+];
+
+let spriteForKey = {
+  g: 'groundgrass', r: 'ground', s: 'scoreboard',
+};
+
 
 function create() {
   parentThis = this;
@@ -367,8 +423,16 @@ function create() {
 
   platforms = this.physics.add.staticGroup();
   punchboxes = this.physics.add.staticGroup();
-  platforms.create(centerX, config.height - 8, 'platform');
-  platforms.create(centerX, 8, 'scoreboard');
+  //platforms.create(centerX, config.height - 8, 'platform');
+
+  for (let i = 0; i < level.length; i++) {
+    let row = level[i];
+    for (let j = 0; j < row.length; j++) {
+      if (spriteForKey.hasOwnProperty(row[j])) {
+        platforms.create(16*j - 8, 16*i + 8, spriteForKey[row[j]]);
+      }
+    }
+  }
 
   // Actor stuff:
 
@@ -444,14 +508,16 @@ function create() {
     right: Phaser.Input.Keyboard.KeyCodes.D,
     b: Phaser.Input.Keyboard.KeyCodes.SPACE,
     a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    pause: Phaser.Input.Keyboard.KeyCodes.P
+    p: Phaser.Input.Keyboard.KeyCodes.P
   });
 
   let zombieSpawner = setInterval(createZombie, 3000);
 }
 
+
 function update() {
   parentThis = this;
+
   randBool = Phaser.Math.Between(0, 1);
 
   // Player input and animations conditionals:
@@ -515,7 +581,6 @@ function update() {
     if (zombie.destroyed && !zombiesFilter) {
       zombiesFilter = true;
       let ZedIdIndex = zombieUsedIDs.indexOf(zombie.id);
-      console.log(ZedIdIndex);
       // Removes dead zombie ID from used IDs:
       zombieUsedIDs.splice(ZedIdIndex, 1);
     } else {

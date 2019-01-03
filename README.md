@@ -1,7 +1,7 @@
 # stdp3
 Super Turbo Dude Puncher... **THREE!**
 
-Undead hordes are taking over the town! Are you a bad enough dude to punch them all?
+Monsters are taking over the town! Are you a bad enough dude to punch them all?
 
 
 Controls:
