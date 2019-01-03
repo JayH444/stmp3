@@ -25,10 +25,9 @@ const config = {
 
 // Initialization for pixel scaling:
 
-
 function init() {
   game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
-  game.scale.setUserScale(4, 4);
+  // game.scale.setUserScale(4, 4);
   // enable crisp rendering
   game.renderer.renderSession.roundPixels = true;
   Phaser.Canvas.setImageRenderingCrisp(this.game.canvas);
@@ -404,7 +403,7 @@ let level = [
   'nnnnnnnnnnnnnnnnnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnn',
   'nnnnnnnnnnnnngggggnnnn',
-  'nnnnnnnnnnnggrrnnnnnnn',
+  'nngnnnnnnnnggrrnnnngnn',
   'nnnnnnnnnngrnnnnnnnnnn',
   'nnnnnngnnnnnnnnnnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnn',

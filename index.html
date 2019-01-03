@@ -5,38 +5,17 @@
   <script>
     // Fixes the windows size issues NW.js seems to have:
     let win = nw.Window.get();
-    let rightHeight = win.appWindow.innerBounds.height == 960 - 11;
-    let rightWidth = win.appWindow.innerBounds.width == 1280 - 11;
+    let rightHeight = win.appWindow.innerBounds.height == 720 - 11;
+    let rightWidth = win.appWindow.innerBounds.width == 960 - 11;
     // For whatever reason, the innerBounds window size 
     // has to be the desired size minus 11px.
     if (!rightHeight || !rightWidth) {
-      win.resizeTo(1280 + 6, 960 + 28);
+      win.resizeTo(960 + 6, 720 + 28);
     }
   </script>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 1280px !important;
-      height: 960px !important;
-    }
-    canvas {
-      width: 1280px !important;
-      height: 960px !important;
-      image-rendering: pixelated !important;
-    }
-    #debug-menu {
-      position: fixed;
-      left: 16px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 32px;
-      top: 64px;
-    }
-    #debug-menu p {
-      margin: 16px 0;
-    }
 
-  </style>
+  <link rel="stylesheet" href="css/style.css">
+  
 </head>
 <body>
 
