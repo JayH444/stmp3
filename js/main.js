@@ -1,8 +1,51 @@
 // Todo: clean up code (more functional/OOP), add level tilemap and
 // level generation, add health pickups, add coins.
 
-// Phaser configuration:
-const config = {
+// Phaser scenes and configuration:
+
+ // For some reason, preload, create, etc has to use normal function syntax
+ // instead of arrow functions. IT WILL NOT WORK OTHERWISE!!!
+
+let mainScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize: function mainScene() {
+    Phaser.Scene.call(this, {key: 'mainScene'});
+  },
+  preload: preload,
+  create: create,
+  update: update
+});
+
+let pausedScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize: function pausedScene () {
+    Phaser.Scene.call(this, {key: 'pausedScene'});
+  },
+  preload: function () {
+  },
+  create: function () {
+    printText('PAUSED', centerX-20, centerY, 'pauseText');
+    this.input.keyboard.on('keydown_P', function () {
+      for (let i of textObjects['pauseText']) {
+        i.destroy();
+      }
+      paused = false;
+      cursors.up.isDown = false;
+      cursors.down.isDown = false;
+      cursors.left.isDown = false;
+      cursors.right.isDown = false;
+      cursors.a.isDown = false;
+      cursors.b.isDown = false;
+      cursors.p.isDown = false;
+      this.scene.resume('mainScene');
+    }, this);
+  },
+  update: function () {
+  }
+});
+
+
+var config = {
   type: Phaser.WEBGL,
   width: 320,
   height: 240,
@@ -14,14 +57,9 @@ const config = {
       debug: false
     }
   },
-  init: init,
-  scene: {
-    preload: preload,
-    create: create,
-    update: update
-  },
+  //init: init,
+  scene: [mainScene, pausedScene]
 };
-
 
 // Initialization for pixel scaling:
 
@@ -96,8 +134,15 @@ let zombiesFilter = false;
 
 
 function printText(str, x, y, id) {
-  // Adds a text element to be displayed.
-  textArr.push([str, x, y, id]);
+  // Prints a text element to the scene and puts it in the textObjects array.
+  let offset = x;
+  let wordImages = [];
+  for (let letter of str) {
+    let charCode = letter.charCodeAt(0) - 32;
+    wordImages.push(parentThis.add.image(offset, y, 'fontmap', charCode));
+    offset += 8;  // Offset for each respective letter.
+  }
+  textObjects[id] = wordImages;
 }
 
 
@@ -131,7 +176,7 @@ function createActor(actor, name, speed) {
   actor.alive = true;
   actor.health = 3;
   actor.stunned = false;
-  actor.invulnerable = false;
+  actor.invul = false;
   actor.flickerTimer = 0;
   actor.destroyed = false;
   // Invulnerability period after getting hit (in ms):
@@ -181,8 +226,8 @@ function createActor(actor, name, speed) {
     actor.stunned = true;
     parentThis.time.delayedCall(time, () => actor.stunned = false);
     if (invulnerable) {
-      parentThis.time.delayedCall(50, () => actor.invulnerable = true);
-      let a = [actor.invulPeriod, () => actor.invulnerable = false]
+      parentThis.time.delayedCall(50, () => actor.invul = true);
+      let a = [actor.invulPeriod, () => actor.invul = false]
       parentThis.time.delayedCall(...a);
     }
   }
@@ -193,6 +238,65 @@ function createActor(actor, name, speed) {
       actor.flickerTimer = 4;
     } else {
       actor.flickerTimer--;
+    }
+  }
+
+  actor.getHit = (target1, target2) => {
+    // Function that executes when collision 
+    // between target1 and target2 occurs.
+    if (target2.body.touching.up) {
+      // target1 is above target2 (headstomp)
+      parentThis.sound.play('punch');
+      parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
+      if (target1.hasOwnProperty('addScore')) {
+        target1.addScore(100);
+      }
+      parentThis.physics.world.removeCollider(target2.punchCollider);
+      target2.die();
+      zombiesAlive--;
+      target1.setVelocityY(-250);
+    } 
+    else {
+      if (!target2.stunned && !target1.invul && !target1.punchAnimPlay) {
+        // target1 can't get hit if target2 is stunned, 
+        // or if target1 is invulnerable
+        target1.setVelocityY(-150);
+        if (!target1.stunned) {
+          // Stuns target1 so they can't move and don't take further damage.
+          parentThis.sound.play('punch');
+          target1.health--;
+          if (target1.hb.length) {
+            target1.hb[0].destroy();
+            target1.hb.shift();
+          }
+        }
+        target1.stun(200, true);
+        let velocity = 400;
+        if (target1.body.velocity.x < 0) {
+          // target1 is moving left...
+          target1.body.velocity.x = velocity;
+        }
+        else if (target1.body.velocity.x > 0) {
+          // target1 is moving right...
+          target1.body.velocity.x = -velocity;
+        }
+        else {
+          // e.g. if target1 is standing still
+          // and target2 walks into them.
+          // Throws target1 back.
+          target1.body.velocity.x = (target2.flipX) ? velocity : -velocity;
+        }
+        if (target1.health <= 0) {
+          target1.body.velocity.x *= -1;
+          // Disables collision with target1:
+          for (let c in target1.colliders) {
+            parentThis.physics.world.removeCollider(target1.colliders[c]);
+          }
+          // Destroys the contents of colliders since target1 is dead:
+          target1.colliders = {};
+          target1.die();
+        }
+      }
     }
   }
 
@@ -230,66 +334,6 @@ function createActor(actor, name, speed) {
       frames: [{key: actor.name, frame: 4}],
       frameRate: 10
     });
-  }
-}
-
-
-function getHit(target1, target2) {
-  // Function that executes when collision 
-  // between target1 and target2 occurs.
-  if (target2.body.touching.up) {
-    // target1 is above target2 (headstomp)
-    this.sound.play('punch');
-    parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
-    if (target1.hasOwnProperty('addScore')) {
-      target1.addScore(100);
-    }
-    parentThis.physics.world.removeCollider(target2.punchCollider);
-    target2.die();
-    zombiesAlive--;
-    target1.setVelocityY(-250);
-  } 
-  else {
-    if (!target2.stunned && !target1.invulnerable && !target1.punchAnimPlay) {
-      // target1 can't get hit if target2 is stunned, 
-      // or if target1 is invulnerable
-      target1.setVelocityY(-150);
-      if (!target1.stunned) {
-        // Stuns target1 so they can't move and don't take further damage.
-        this.sound.play('punch');
-        target1.health--;
-        if (target1.hb.length) {
-          target1.hb[0].destroy();
-          target1.hb.shift();
-        }
-      }
-      target1.stun(200, true);
-      let velocity = 400;
-      if (target1.body.velocity.x < 0) {
-        // target1 is moving left...
-        target1.body.velocity.x = velocity;
-      }
-      else if (target1.body.velocity.x > 0) {
-        // target1 is moving right...
-        target1.body.velocity.x = -velocity;
-      }
-      else {
-        // e.g. if target1 is standing still
-        // and target2 walks into them.
-        // Throws target1 back.
-        target1.body.velocity.x = (target2.flipX) ? velocity : -velocity;
-      }
-      if (target1.health <= 0) {
-        target1.body.velocity.x *= -1;
-        // Disables collision with target1:
-        for (let collider in target1.colliders) {
-          parentThis.physics.world.removeCollider(target1.colliders[collider]);
-        }
-        // Destroys the contents of colliders since target1 is dead:
-        target1.colliders = {};
-        target1.die();
-      }
-    }
   }
 }
 
@@ -348,7 +392,7 @@ function createZombie(startPosX=true) {
   zed.speed *= 1 + (Math.random() - 0.5) / 7;
   parentThis.physics.add.collider(zed, platforms);
   if (player.alive) {
-    zed.collisionArgs = [player, zed, getHit, null, parentThis]
+    zed.collisionArgs = [player, zed, player.getHit, null, parentThis]
     zed.collider = parentThis.physics.add.overlap(...zed.collisionArgs);
     player.colliders[zed.id] = zed.collider;
   }
@@ -476,28 +520,13 @@ function create() {
   // Collision detection for player and zombies:
   player.colliders = {};
   for (let zed of zombies) {
-    zed.collisionArgs = [player, zed, getHit, null, this]
+    zed.collisionArgs = [player, zed, player.getHit, null, this]
     zed.collider = this.physics.add.overlap(...zed.collisionArgs);
     player.colliders[zed.id] = zed.collider;
   }
 
-  // Loop for drawing text on the screen:
-  // (All text must go BEFORE this to be rendered.)
   printText('SCORE:', 8, 8, 'scoreText');
   printText(player.getScore(), 8 + 48, 8, 'playerScore')
-
-  // Renders the text:
-  for (let i of textArr) {
-    // TextArr format: [string, x, y, id]
-    let offset = i[1];
-    let wordImages = [];
-    for (let letter of i[0]) {
-      let charCode = letter.charCodeAt(0) - 32;
-      wordImages.push(this.add.image(offset, i[2], 'fontmap', charCode));
-      offset += 8;  // Offset for each respective letter.
-    }
-    textObjects[i[3]] = wordImages;
-  }
 
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
@@ -517,9 +546,19 @@ function create() {
 function update() {
   parentThis = this;
 
+  if (cursors.p.isDown & !paused) {
+    paused = true;
+    this.scene.launch('pausedScene');
+    this.scene.pause('mainScene');
+  } 
+  else {
+      this.scene.resume('mainScene');
+  }
+
   randBool = Phaser.Math.Between(0, 1);
 
   // Player input and animations conditionals:
+
   if (player.alive) {
     if (!(cursors.left.isDown && cursors.right.isDown)) {
       if (cursors.left.isDown) {
@@ -566,7 +605,7 @@ function update() {
       player.holdingJump = false;
     }
 
-    if (player.invulnerable) {
+    if (player.invul) {
       player.flicker();
     } else {
       player.visible = true;
