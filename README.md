@@ -9,6 +9,7 @@ Controls:
 Movement: WASD  
 Jump: Space  
 Punch: Ctrl  
+Pause: P  
 
 
 Created with Phaser.js: https://phaser.io  

@@ -1,6 +1,6 @@
 "use strict";
 
-// Todo: clean up code (more functional/OOP), add level tilemap and
+// Todo: clean up code (more functional/OOP), add
 // level generation, add health pickups, add coins.
 
 // Phaser scenes and configuration:
@@ -497,7 +497,8 @@ let debugMenu = new debuggingMenu();
   Scoreboard = s,
   Ground w/ grass = g,
   Ground w/o grass (rocks) = r,
-  Nothing (sky) = n
+  Nothing (sky) = n,
+  Edge node (for NPCs) = e
  
  */
 
@@ -505,18 +506,18 @@ let level = [
   'ssssssssssssssssssssss',
   'nnnnnnnnnnnnnnnnnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnn',
-  'znnnnnnnnnnnnnnnnnnnnn',
+  'znnnnnnnnennnnnnnennnz',
   'gggggggggnnnnnnnnngggg',
   'rrrrrrrnnnngnnnnnnnrrr',
-  'nnnnnnnnnnnnnngnnnnnrr',
+  'rrnnnnnnnnnnnngnnnnnrr',
   'nnnnnnnnnnnnnnrgnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnz',
   'nnnnnnnnnnnnnggggggggg',
-  'nngnnnnnnnnggrrnnnnnnn',
+  'nngnnnnnnenggrrnnnnnnn',
   'nnnnnnnnnngrnnnnnnnnnn',
   'nnnnnngnnnnnnnnnnnnnnn',
-  'znngnnnnnnnnngnnnnnnnz',
-  'gggggggggggggggggggggg'
+  'znnnnnnnnnnnngnnnnnnnz',
+  'gggggggggggggrgggggggg'
 ];
 
 let spriteForKey = {
@@ -546,6 +547,11 @@ function create() {
       }
       else if (functionForKey.hasOwnProperty(row[j])) {
         functionForKey[row[j]](x, y);
+      }
+      else if (row[j] != 'n') {
+        let message = 'Unknown map element "' + row[j] + '"' +
+          ' at row ' + (i+1) + ', col ' + (j+1) + '.';
+        console.log(message);
       }
     }
   }
