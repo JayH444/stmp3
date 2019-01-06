@@ -373,8 +373,27 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.standingAtTarget = false;
   zed.chasing = false;
   zed.seesTarget = false;
+  zed.cantJump = false;
+  createActor(zed, 'zombie', 40, parentThis);
+  // Gives a zombie a random speed:
+  zed.speed *= 1 + (Math.random() - 0.5) / 7;
 
   // Zombie AI stuff:
+
+  // Minus one so they don't jump as soon as they spawn:
+  zed.lastx = zed.x - 1;
+  zed.updateLastX = () => {
+    zed.lastx = zed.x;
+  }
+  let posTimerArgs = {delay: 200, callback: zed.updateLastX, repeat: -1};
+  zed.positionTimer = parentThis.time.addEvent(posTimerArgs);
+
+  let wanderDirection = false;  // false == right, true == true
+  zed.newWanderDir = () => {
+    wanderDirection = Boolean(Phaser.Math.Between(0, 1));
+  }
+  zed.wanderTimerArgs = {delay: 2000, callback: zed.newWanderDir, repeat: -1};
+  zed.newWanderDirectionTimer = parentThis.time.addEvent(zed.wanderTimerArgs);
 
   zed.chaseTarget = (movementVector) => {
     zed.standingAtTarget = false;
@@ -383,57 +402,40 @@ function createZombie(timer, x=0, y=0, random=true) {
     zed.anims.play('zombieMove', true);
   }
   zed.wander = () => {
-
+    let movementVector = (wanderDirection) ? zed.speed : -zed.speed;
+    if (zed.newWanderDirectionTimer.elapsed < 1700) {
+      zed.moveX(movementVector, zed.drag);
+      zed.anims.play('zombieMove', true);
+      zed.flipX = !wanderDirection;
+      if (zed.x == zed.lastx && !zed.cantJump) {
+        //zed.setVelocityY(-125);
+      }
+      zed.cantJump = false;
+    }
+    else {
+      zed.cantJump = true;
+      zed.goIdle();
+    }
   }
-  // Minus one so they don't jump as soon as they spawn:
-  zed.lastx = zed.x - 1;
-  zed.updateLastX = () => {
-    zed.lastx = zed.x;
-  }
-  let timerArgs = {delay: 300, callback: zed.updateLastX, repeat: -1};
-  zed.positionTimer = parentThis.time.addEvent(timerArgs);
   
   zed.move = (target) => {  // Zombie movement AI.
     if (zed.alive) {
-      if (zed.lastx == zed.x && zed.chasing && !zed.standingAtTarget) {
-        // Basically, if the zombie isn't moving, and it isn't
-        // standing at the player's location, jump.
-        if (zed.body.touching.down) {
-          zed.setVelocityY(-200);
-        }
+      if (zed.x <= zed.width/2) {
+        wanderDirection = !wanderDirection;
+        zed.cantJump = true;
+        zed.moveX(zed.speed, zed.drag);
+        zed.anims.play('zombieMove', true);
+        zed.flipX = false;
       }
-      let facingPlayer = (
-        zed.x < target.x && !zed.flipX ||
-        zed.x > target.x && zed.flipX
-      );
-      if (Math.abs(zed.y - target.y) <= 4 * 16 && facingPlayer) {
-        // If facing player, and the height difference between the 
-        // target and zombie is less than four tiles, zed sees them.
-        zed.seesTarget = true;
-      } else {
-        zed.seesTarget = false;
-      }
-      if (Math.abs(zed.y - target.y) <= 4 * 16 && (zed.seesTarget || zed.chasing)) {
-        // If the height difference between the target and zombie is
-        // less than four tiles, pursue them.
-        if (zed.x < target.x - 2) {
-          zed.chaseTarget(zed.speed);
-          zed.flipX = false;
-        }
-        else if (zed.x > target.x + 2) {
-          zed.chaseTarget(-zed.speed);
-          zed.flipX = true;
-        }
-        else {
-          zed.standingAtTarget = true;
-          zed.decayVelocityX();
-          zed.anims.play('zombieIdle', true);
-        }
+      else if (zed.x >= config.width - zed.width/2) {
+        wanderDirection = !wanderDirection;
+        zed.cantJump = true;
+        zed.moveX(-zed.speed, zed.drag);
+        zed.anims.play('zombieMove', true);
+        zed.flipX = true;
       }
       else {
-        zed.decayVelocityX();
-        zed.chasing = false;
-        zed.anims.play('zombieIdle', true);
+        zed.wander();
       }
     }
     else {
@@ -443,10 +445,6 @@ function createZombie(timer, x=0, y=0, random=true) {
     }
   }
 
-
-  createActor(zed, 'zombie', 40, parentThis);
-  // Gives a zombie a random speed:
-  zed.speed *= 1 + (Math.random() - 0.5) / 7;
   parentThis.physics.add.collider(zed, platforms);
   if (player.alive) {
     zed.collisionArgs = [player, zed, player.getHit, null, parentThis]
@@ -510,7 +508,7 @@ let level = [
   'nngnnnnnnnnggrrnnnnnnn',
   'nnnnnnnnnngrnnnnnnnnnn',
   'nnnnnngnnnnnnnnnnnnnnn',
-  'znnnnnnnnnnnnnnnnnnnnz',
+  'znngnnnnnnnnngnnnnnnnz',
   'gggggggggggggggggggggg'
 ];
 
