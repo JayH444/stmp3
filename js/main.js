@@ -85,8 +85,9 @@ function preload() {
   this.load.image('scoreboard', 'assets/scoreboard.png');
   this.load.image('heart', 'assets/heart.png');
   this.load.image('punchbox', 'assets/punchcollisionbox.png');
+  this.load.image('edgenode', 'assets/edgenode.png');
 
-  // Font spritesheet uses ASCII values minus 32.
+  // Font spritesheet. Uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/font.png', 
     {frameWidth: 8, frameHeight: 8}
   );
@@ -115,6 +116,7 @@ let centerY = config.height/2;
 let player;
 let platforms;
 let punchboxes;
+let edgeNodes;
 let cursors;
 let paused = false;
 let parentThis;
@@ -373,7 +375,7 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.standingAtTarget = false;
   zed.chasing = false;
   zed.seesTarget = false;
-  zed.cantJump = false;
+  zed.wandering = true;
   createActor(zed, 'zombie', 40, parentThis);
   // Gives a zombie a random speed:
   zed.speed *= 1 + (Math.random() - 0.5) / 7;
@@ -396,13 +398,17 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.wanderTimer = parentThis.time.addEvent(zed.wanderTimerArgs);
 
   zed.chaseTarget = (movementVector) => {
+    // When the zombie IS pursuing the player.
     zed.standingAtTarget = false;
+    zed.wandering = false;
     zed.chasing = true;
     zed.moveX(movementVector, zed.drag);
     zed.anims.play('zombieMove', true);
   }
 
   zed.wander = () => {
+    // When the zombie isn't pursuing the player.
+    zed.wandering = true;
     let movementVector = (wanderDirection) ? zed.speed : -zed.speed;
     if (zed.wanderTimer.elapsed < 1700) {
       zed.moveX(movementVector, zed.drag);
@@ -416,6 +422,7 @@ function createZombie(timer, x=0, y=0, random=true) {
   
   zed.move = (target) => {  // Zombie movement AI.
     if (zed.alive) {
+      // Stuff for when the zombies sees the player:
       zed.seesPlayerLeft = (
         (zed.x < target.x && !zed.flipX) &&
         Math.abs(zed.y - target.y) < 32
@@ -424,6 +431,7 @@ function createZombie(timer, x=0, y=0, random=true) {
         (zed.x > target.x && zed.flipX) &&
         Math.abs(zed.y - target.y) < 32
       );
+      // Movement conditionals:
       if (zed.x <= zed.width/2 || zed.seesPlayerLeft) {
         wanderDirection = !wanderDirection;
         zed.moveX(zed.speed, zed.drag);
@@ -474,6 +482,16 @@ function createZombie(timer, x=0, y=0, random=true) {
   // Adding punch collision:
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);
+  
+  zed.changeDir = () => {
+    if (zed.wandering && zed.body.touching.down) {
+      wanderDirection = (wanderDirection) ? false : true;
+      console.log(wanderDirection);
+    }
+  }
+
+  zed.edgeDetectorArgs = [zed, edgeNodes, zed.changeDir, null, parentThis];
+  zed.edgeDetector = parentThis.physics.add.overlap(...zed.edgeDetectorArgs);
   zombies.push(zed);
 }
 
@@ -488,7 +506,7 @@ let debugMenu = new debuggingMenu();
 /*
   Levels consist of an array from 15 strings forming the rows,
   where each character represents a 16x16 pixel tile. 
-  There are 24 columns total, 20 of which are visible.
+  There are 22 columns total, 20 of which are visible.
   The remaining 4 are for offscreen things like zombie spawners
   and offscreen platforms for the zombies to stand on.
 
@@ -512,9 +530,9 @@ let level = [
   'rrnnnnnnnnnnnngnnnnnrr',
   'nnnnnnnnnnnnnnrgnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnz',
-  'nnnnnnnnnnnnnggggggggg',
-  'nngnnnnnnenggrrnnnnnnn',
-  'nnnnnnnnnngrnnnnnnnnnn',
+  'nnnnnnnnnnnnnngggggggg',
+  'nngnnnnnennnggrrnnnnnn',
+  'nnnnnnnnngggrnnnnnnnnn',
   'nnnnnngnnnnnnnnnnnnnnn',
   'znnnnnnnnnnnngnnnnnnnz',
   'gggggggggggggrgggggggg'
@@ -524,9 +542,12 @@ let spriteForKey = {
   g: 'groundgrass', r: 'ground', s: 'scoreboard',
 };
 let functionForKey = {
-  z: createZombieSpawn
-}
+  z: createZombieSpawn, e: createEdgeNode
+};
 
+function createEdgeNode(x, y) {
+  edgeNodes.create(x, y, 'edgenode');
+}
 
 function create() {
   parentThis = this;
@@ -535,7 +556,7 @@ function create() {
 
   platforms = this.physics.add.staticGroup();
   punchboxes = this.physics.add.staticGroup();
-  //platforms.create(centerX, config.height - 8, 'platform');
+  edgeNodes = this.physics.add.staticGroup();
 
   for (let i = 0; i < level.length; i++) {
     let row = level[i];
