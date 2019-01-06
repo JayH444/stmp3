@@ -1,3 +1,5 @@
+"use strict";
+
 // Todo: clean up code (more functional/OOP), add level tilemap and
 // level generation, add health pickups, add coins.
 
@@ -16,6 +18,7 @@ let mainScene = new Phaser.Class({
   update: update
 });
 
+
 let pausedScene = new Phaser.Class({
   Extends: Phaser.Scene,
   initialize: function pausedScene () {
@@ -26,9 +29,7 @@ let pausedScene = new Phaser.Class({
   create: function () {
     printText('PAUSED', centerX-20, centerY, 'pauseText');
     this.input.keyboard.on('keydown_P', function () {
-      for (let i of textObjects['pauseText']) {
-        i.destroy();
-      }
+      destroyText('pauseText');
       paused = false;
       cursors.up.isDown = false;
       cursors.down.isDown = false;
@@ -112,7 +113,6 @@ let game = new Phaser.Game(config);
 let centerX = config.width/2;
 let centerY = config.height/2;
 let player;
-let zombies;
 let platforms;
 let punchboxes;
 let cursors;
@@ -125,9 +125,6 @@ let textObjects = {};  // Object for storing the displayed texts.
 // Removing an key from it or reassigning letters in key's value 
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
-
-// Becomes true if a destroyed zombie is detected in the zombies array:
-let zombiesFilter = false;
 
 
 // Global functions:
@@ -191,7 +188,7 @@ function createActor(actor, name, speed) {
 
   actor.decayVelocityX = (arg=0.5) => {  // Actor velocity decay from drag.
     if (actor.destroyed) return;
-    decayRatio = arg;
+    let decayRatio = arg;
     if (!actor.body.touching.down) {  // Less drag if actor in air.
       decayRatio *= 1.75;
     }
@@ -214,12 +211,13 @@ function createActor(actor, name, speed) {
   }
 
   actor.die = () => {
+    actor.visible = true;
     actor.alive = false;
     actor.health = 0;
     actor.anims.play(actor.name + 'Die');
     if (actor.collision) actor.collision.destroy();
     parentThis.time.delayedCall(1000, () => actor.destroyed = true);
-    parentThis.time.delayedCall(5000, () => actor.destroy());
+    //parentThis.time.delayedCall(5000, () => actor.destroy());
   }
 
   actor.stun = (time, invulnerable=false) => {
@@ -308,7 +306,8 @@ function createActor(actor, name, speed) {
       frames: parentThis.anims
         .generateFrameNumbers(actor.name, {start: 1, end: 2}),
       frameRate: actor.animSpeed,
-      repeat: -1
+      repeat: -1,
+      loop: true
     });
 
     parentThis.anims.create({
@@ -338,20 +337,27 @@ function createActor(actor, name, speed) {
 }
 
 
+// Becomes true if a destroyed zombie is detected in the zombies array:
+let zombiesFilter = false;
 // Array for storing alive zombies to be iterated over for movement:
-zombies = [];
-zombieUsedIDs = [];
-zombiesAlive = 0;
+let zombies = [];
+let zombieUsedIDs = [];
+let zombiesAlive = 0;
+let zombieTimer;
+let zombieSpawnpoints = [];
 
 
-function createZombie(startPosX=true) {
+function createZombie(timer, x=0, y=0, random=true) {
+  // Creates a zombie. startPos is a tuple of the 
   // Prevents more than ten zombies at a time from spawning:
   if (zombiesAlive >= 10) return;
   zombiesAlive++;
-  if (startPosX === true) {
-    startPosX = (randBool) ? -16 : config.width + 16;
+  if (random) {
+    // Selects a random spawnpoint out of the list of spawnpoints:
+    let randomSpawn = parseInt(Math.random() * zombieSpawnpoints.length);
+    [x, y] = zombieSpawnpoints[randomSpawn];
   }
-  let spriteArgs = [startPosX, config.height - 24, 'zombie'];
+  let spriteArgs = [x, y, 'zombie'];
   let zed = parentThis.physics.add.sprite(...spriteArgs);
   // Generates an ID for the zombies to be addressed by.
   // Technically will encounter problems if the count gets too high, 
@@ -364,20 +370,69 @@ function createZombie(startPosX=true) {
   zed.id = IDNum;
   zombieUsedIDs.push(IDNum);
   zed.setCollideWorldBounds(false);
-  zed.move = (posX, targetX) => {  // Zombie AI.
+  zed.standingAtTarget = false;
+  zed.chasing = false;
+  zed.seesTarget = false;
+
+  // Zombie AI stuff:
+
+  zed.chaseTarget = (movementVector) => {
+    zed.standingAtTarget = false;
+    zed.chasing = true;
+    zed.moveX(movementVector, zed.drag);
+    zed.anims.play('zombieMove', true);
+  }
+  zed.wander = () => {
+
+  }
+  // Minus one so they don't jump as soon as they spawn:
+  zed.lastx = zed.x - 1;
+  zed.updateLastX = () => {
+    zed.lastx = zed.x;
+  }
+  let timerArgs = {delay: 300, callback: zed.updateLastX, repeat: -1};
+  zed.positionTimer = parentThis.time.addEvent(timerArgs);
+  
+  zed.move = (target) => {  // Zombie movement AI.
     if (zed.alive) {
-      if (posX < targetX - 2) {
-        zed.moveX(zed.speed, zed.drag);
-        zed.flipX = false;
-        zed.anims.play('zombieMove', true);
+      if (zed.lastx == zed.x && zed.chasing && !zed.standingAtTarget) {
+        // Basically, if the zombie isn't moving, and it isn't
+        // standing at the player's location, jump.
+        if (zed.body.touching.down) {
+          zed.setVelocityY(-200);
+        }
       }
-      else if (posX > targetX + 2) {
-        zed.moveX(-zed.speed, zed.drag);
-        zed.flipX = true;
-        zed.anims.play('zombieMove', true);
+      let facingPlayer = (
+        zed.x < target.x && !zed.flipX ||
+        zed.x > target.x && zed.flipX
+      );
+      if (Math.abs(zed.y - target.y) <= 4 * 16 && facingPlayer) {
+        // If facing player, and the height difference between the 
+        // target and zombie is less than four tiles, zed sees them.
+        zed.seesTarget = true;
+      } else {
+        zed.seesTarget = false;
+      }
+      if (Math.abs(zed.y - target.y) <= 4 * 16 && (zed.seesTarget || zed.chasing)) {
+        // If the height difference between the target and zombie is
+        // less than four tiles, pursue them.
+        if (zed.x < target.x - 2) {
+          zed.chaseTarget(zed.speed);
+          zed.flipX = false;
+        }
+        else if (zed.x > target.x + 2) {
+          zed.chaseTarget(-zed.speed);
+          zed.flipX = true;
+        }
+        else {
+          zed.standingAtTarget = true;
+          zed.decayVelocityX();
+          zed.anims.play('zombieIdle', true);
+        }
       }
       else {
         zed.decayVelocityX();
+        zed.chasing = false;
         zed.anims.play('zombieIdle', true);
       }
     }
@@ -387,6 +442,8 @@ function createZombie(startPosX=true) {
         }
     }
   }
+
+
   createActor(zed, 'zombie', 40, parentThis);
   // Gives a zombie a random speed:
   zed.speed *= 1 + (Math.random() - 0.5) / 7;
@@ -415,6 +472,9 @@ function createZombie(startPosX=true) {
   zombies.push(zed);
 }
 
+function createZombieSpawn(x, y) {
+  zombieSpawnpoints.push([x, y])
+}
 
 let debugMenu = new debuggingMenu();
 
@@ -440,23 +500,26 @@ let level = [
   'ssssssssssssssssssssss',
   'nnnnnnnnnnnnnnnnnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnngggggnnnn',
-  'nngnnnnnnnnggrrnnnngnn',
+  'znnnnnnnnnnnnnnnnnnnnn',
+  'gggggggggnnnnnnnnngggg',
+  'rrrrrrrnnnngnnnnnnnrrr',
+  'nnnnnnnnnnnnnngnnnnnrr',
+  'nnnnnnnnnnnnnnrgnnnnnn',
+  'nnnnnnnnnnnnnnnnnnnnnz',
+  'nnnnnnnnnnnnnggggggggg',
+  'nngnnnnnnnnggrrnnnnnnn',
   'nnnnnnnnnngrnnnnnnnnnn',
   'nnnnnngnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
+  'znnnnnnnnnnnnnnnnnnnnz',
   'gggggggggggggggggggggg'
 ];
 
 let spriteForKey = {
   g: 'groundgrass', r: 'ground', s: 'scoreboard',
 };
+let functionForKey = {
+  z: createZombieSpawn
+}
 
 
 function create() {
@@ -471,8 +534,13 @@ function create() {
   for (let i = 0; i < level.length; i++) {
     let row = level[i];
     for (let j = 0; j < row.length; j++) {
+      let x = 16*j - 8;
+      let y = 16*i + 8;
       if (spriteForKey.hasOwnProperty(row[j])) {
-        platforms.create(16*j - 8, 16*i + 8, spriteForKey[row[j]]);
+        platforms.create(x, y, spriteForKey[row[j]]);
+      }
+      else if (functionForKey.hasOwnProperty(row[j])) {
+        functionForKey[row[j]](x, y);
       }
     }
   }
@@ -539,7 +607,8 @@ function create() {
     p: Phaser.Input.Keyboard.KeyCodes.P
   });
 
-  let zombieSpawner = setInterval(createZombie, 3000);
+  let timerArgs = {delay: 3000, callback: createZombie, repeat: -1};
+  zombieTimer = this.time.addEvent(timerArgs);
 }
 
 
@@ -622,7 +691,7 @@ function update() {
       // Removes dead zombie ID from used IDs:
       zombieUsedIDs.splice(ZedIdIndex, 1);
     } else {
-      zombie.move(zombie.x, player.x);
+      zombie.move(player);
     }
   });
 
