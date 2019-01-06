@@ -393,7 +393,7 @@ function createZombie(timer, x=0, y=0, random=true) {
     wanderDirection = Boolean(Phaser.Math.Between(0, 1));
   }
   zed.wanderTimerArgs = {delay: 2000, callback: zed.newWanderDir, repeat: -1};
-  zed.newWanderDirectionTimer = parentThis.time.addEvent(zed.wanderTimerArgs);
+  zed.wanderTimer = parentThis.time.addEvent(zed.wanderTimerArgs);
 
   zed.chaseTarget = (movementVector) => {
     zed.standingAtTarget = false;
@@ -401,41 +401,48 @@ function createZombie(timer, x=0, y=0, random=true) {
     zed.moveX(movementVector, zed.drag);
     zed.anims.play('zombieMove', true);
   }
+
   zed.wander = () => {
     let movementVector = (wanderDirection) ? zed.speed : -zed.speed;
-    if (zed.newWanderDirectionTimer.elapsed < 1700) {
+    if (zed.wanderTimer.elapsed < 1700) {
       zed.moveX(movementVector, zed.drag);
       zed.anims.play('zombieMove', true);
       zed.flipX = !wanderDirection;
-      if (zed.x == zed.lastx && !zed.cantJump) {
-        //zed.setVelocityY(-125);
-      }
-      zed.cantJump = false;
     }
     else {
-      zed.cantJump = true;
       zed.goIdle();
     }
   }
   
   zed.move = (target) => {  // Zombie movement AI.
     if (zed.alive) {
-      if (zed.x <= zed.width/2) {
+      zed.seesPlayerLeft = (
+        (zed.x < target.x && !zed.flipX) &&
+        Math.abs(zed.y - target.y) < 32
+      );
+      zed.seesPlayerRight = (
+        (zed.x > target.x && zed.flipX) &&
+        Math.abs(zed.y - target.y) < 32
+      );
+      if (zed.x <= zed.width/2 || zed.seesPlayerLeft) {
         wanderDirection = !wanderDirection;
-        zed.cantJump = true;
         zed.moveX(zed.speed, zed.drag);
         zed.anims.play('zombieMove', true);
         zed.flipX = false;
       }
-      else if (zed.x >= config.width - zed.width/2) {
+      else if (zed.x >= config.width - zed.width/2 || zed.seesPlayerRight) {
         wanderDirection = !wanderDirection;
-        zed.cantJump = true;
         zed.moveX(-zed.speed, zed.drag);
         zed.anims.play('zombieMove', true);
         zed.flipX = true;
       }
       else {
         zed.wander();
+      }
+      let touchingWall = zed.body.touching.left || zed.body.touching.right;
+      if (touchingWall && zed.x == zed.lastx) {
+        // If touching a wall and not moved since last position...
+        zed.setVelocityY(-125);
       }
     }
     else {
