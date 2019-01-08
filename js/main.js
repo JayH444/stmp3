@@ -382,9 +382,7 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.speed *= 1 + (Math.random() - 0.5) / 7;
 
   // Zombie AI stuff:
-
-  // Minus one so they don't jump as soon as they spawn:
-  zed.lastx = zed.x - 1;
+  zed.lastx = zed.x;
   zed.updateLastX = () => {
     zed.lastx = zed.x;
   }
@@ -401,14 +399,14 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.wander = () => {
     // When the zombie isn't pursuing the player.
     zed.wandering = true;
-    let movementVector = (wanderDirection) ? zed.speed : -zed.speed;
+    let movementVector = (wanderDirection) ? -zed.speed : zed.speed;
     //let validMovementRange = zed.x > zed.width;
     if (zed.wanderTimer.elapsed < 1700) {
       if (zed.x <= zed.width/2 - 2) {
-        wanderDirection = true;
+        wanderDirection = false;
       }
       else if (zed.x >= config.width - zed.width/2 + 2) {
-        wanderDirection = false;
+        wanderDirection = true;
       }
       zed.go(movementVector);
     }
@@ -485,11 +483,14 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);
   
   zed.changeDir = (zed, node) => {
-    console.log('Node X coord:' + node.x);
-    if (zed.wandering && zed.body.touching.down && !zed.nodeTouched) {
-      wanderDirection = (wanderDirection) ? false : true;
-      console.log(wanderDirection);
-      zed.nodeTouched = true;
+    console.log(node.x);
+    if (zed.wandering && zed.body.touching.down) {
+      if (zed.x <= node.x) {
+        wanderDirection = true;
+      }
+      else if (zed.x > node.x) {
+        wanderDirection = false;
+      }
     }
   }
 
@@ -519,7 +520,7 @@ let debugMenu = new debuggingMenu();
   Ground w/ grass = g,
   Ground w/o grass (rocks) = r,
   Nothing (sky) = n,
-  Edge node (for NPCs) = e
+  Edge node left (for NPCs) = e
  */
 
 let level = [
