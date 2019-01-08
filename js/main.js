@@ -373,6 +373,7 @@ function createZombie(timer, x=0, y=0, random=true) {
   zombieUsedIDs.push(IDNum);
   zed.setCollideWorldBounds(false);
   zed.standingAtTarget = false;
+  zed.nodeTouched = false;
   zed.chasing = false;
   zed.seesTarget = false;
   zed.wandering = true;
@@ -390,61 +391,58 @@ function createZombie(timer, x=0, y=0, random=true) {
   let posTimerArgs = {delay: 200, callback: zed.updateLastX, repeat: -1};
   zed.positionTimer = parentThis.time.addEvent(posTimerArgs);
 
-  let wanderDirection = false;  // false == right, true == true
+  let wanderDirection = false;  // false == right, true == left
   zed.newWanderDir = () => {
     wanderDirection = Boolean(Phaser.Math.Between(0, 1));
   }
   zed.wanderTimerArgs = {delay: 2000, callback: zed.newWanderDir, repeat: -1};
   zed.wanderTimer = parentThis.time.addEvent(zed.wanderTimerArgs);
 
-  zed.chaseTarget = (movementVector) => {
-    // When the zombie IS pursuing the player.
-    zed.standingAtTarget = false;
-    zed.wandering = false;
-    zed.chasing = true;
-    zed.moveX(movementVector, zed.drag);
-    zed.anims.play('zombieMove', true);
-  }
-
   zed.wander = () => {
     // When the zombie isn't pursuing the player.
     zed.wandering = true;
     let movementVector = (wanderDirection) ? zed.speed : -zed.speed;
+    //let validMovementRange = zed.x > zed.width;
     if (zed.wanderTimer.elapsed < 1700) {
-      zed.moveX(movementVector, zed.drag);
-      zed.anims.play('zombieMove', true);
-      zed.flipX = !wanderDirection;
+      if (zed.x <= zed.width/2 - 2) {
+        wanderDirection = true;
+      }
+      else if (zed.x >= config.width - zed.width/2 + 2) {
+        wanderDirection = false;
+      }
+      zed.go(movementVector);
     }
     else {
       zed.goIdle();
     }
   }
   
+  zed.go = (speed) => {
+    zed.moveX(speed, zed.drag);
+    zed.anims.play('zombieMove', true);
+    zed.flipX = (speed < 0) ? true : false;
+  }
+  
   zed.move = (target) => {  // Zombie movement AI.
     if (zed.alive) {
       // Stuff for when the zombies sees the player:
-      zed.seesPlayerLeft = (
-        (zed.x < target.x && !zed.flipX) &&
-        Math.abs(zed.y - target.y) < 32
-      );
       zed.seesPlayerRight = (
+        (zed.x < target.x && !zed.flipX) &&
+        Math.abs(zed.y - target.y) < 32 &&
+        target.alive
+      );
+      zed.seesPlayerLeft = (
         (zed.x > target.x && zed.flipX) &&
-        Math.abs(zed.y - target.y) < 32
+        Math.abs(zed.y - target.y) < 32 &&
+        target.alive
       );
       // Movement conditionals:
-      if (zed.x <= zed.width/2 || zed.seesPlayerLeft) {
-        wanderDirection = !wanderDirection;
-        zed.moveX(zed.speed, zed.drag);
-        zed.anims.play('zombieMove', true);
-        zed.flipX = false;
+      if (zed.seesPlayerLeft) {
+        zed.go(-zed.speed);
       }
-      else if (zed.x >= config.width - zed.width/2 || zed.seesPlayerRight) {
-        wanderDirection = !wanderDirection;
-        zed.moveX(-zed.speed, zed.drag);
-        zed.anims.play('zombieMove', true);
-        zed.flipX = true;
-      }
-      else {
+      else if (zed.seesPlayerRight) {
+        zed.go(zed.speed);
+      } else {
         zed.wander();
       }
       let touchingWall = zed.body.touching.left || zed.body.touching.right;
@@ -454,6 +452,9 @@ function createZombie(timer, x=0, y=0, random=true) {
       }
     }
     else {
+      if (zed.body.collideWorldBounds) {
+        zed.setCollideWorldBounds(false);
+      }
         if (!zed.destroyed) {
           zed.decayVelocityX();
         }
@@ -477,16 +478,18 @@ function createZombie(timer, x=0, y=0, random=true) {
     parentThis.physics.world.removeCollider(zed.punchCollider);
     target1.die();
     zombiesAlive--;
-    player.addScore(100);
+    player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
   }
   // Adding punch collision:
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);
   
-  zed.changeDir = () => {
-    if (zed.wandering && zed.body.touching.down) {
+  zed.changeDir = (zed, node) => {
+    console.log('Node X coord:' + node.x);
+    if (zed.wandering && zed.body.touching.down && !zed.nodeTouched) {
       wanderDirection = (wanderDirection) ? false : true;
       console.log(wanderDirection);
+      zed.nodeTouched = true;
     }
   }
 
@@ -517,7 +520,6 @@ let debugMenu = new debuggingMenu();
   Ground w/o grass (rocks) = r,
   Nothing (sky) = n,
   Edge node (for NPCs) = e
- 
  */
 
 let level = [
