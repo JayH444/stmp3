@@ -86,6 +86,7 @@ function preload() {
   this.load.image('heart', 'assets/heart.png');
   this.load.image('punchbox', 'assets/punchcollisionbox.png');
   this.load.image('edgenode', 'assets/edgenode.png');
+  this.load.image('coin', 'assets/coin.png');
 
   // Font spritesheet. Uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/font.png', 
@@ -102,7 +103,10 @@ function preload() {
 
   // Sound effects:
   this.load.audio('jump', 'sfx/jump.wav');
-  this.load.audio('punch', 'sfx/punch1.wav');
+  this.load.audio('punch1', 'sfx/punch1.wav');
+  this.load.audio('punch2', 'sfx/punch2.wav');
+  this.load.audio('punch3', 'sfx/punch3.wav');
+  this.load.audio('pickup', 'sfx/pickup.wav');
 }
 
 
@@ -114,7 +118,9 @@ let game = new Phaser.Game(config);
 let centerX = config.width/2;
 let centerY = config.height/2;
 let player;
+let coins;
 let platforms;
+let grass;
 let punchboxes;
 let edgeNodes;
 let cursors;
@@ -241,12 +247,17 @@ function createActor(actor, name, speed) {
     }
   }
 
+  actor.playSoundPunch = () => {
+    let s = Phaser.Math.RND.pick(['punch1', 'punch2', 'punch3']);
+    parentThis.sound.play(s);
+  }
+
   actor.getHit = (target1, target2) => {
     // Function that executes when collision 
     // between target1 and target2 occurs.
     if (target2.body.touching.up) {
       // target1 is above target2 (headstomp)
-      parentThis.sound.play('punch');
+      actor.playSoundPunch();
       parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
       if (target1.hasOwnProperty('addScore')) {
         target1.addScore(100);
@@ -263,7 +274,7 @@ function createActor(actor, name, speed) {
         target1.setVelocityY(-150);
         if (!target1.stunned) {
           // Stuns target1 so they can't move and don't take further damage.
-          parentThis.sound.play('punch');
+          actor.playSoundPunch();
           target1.health--;
           if (target1.hb.length) {
             target1.hb[0].destroy();
@@ -426,12 +437,12 @@ function createZombie(timer, x=0, y=0, random=true) {
       // Stuff for when the zombies sees the player:
       zed.seesPlayerRight = (
         (zed.x < target.x && !zed.flipX) &&
-        Math.abs(zed.y - target.y) < 32 &&
+        Math.abs(zed.y - target.y) <= 30 &&
         target.alive
       );
       zed.seesPlayerLeft = (
         (zed.x > target.x && zed.flipX) &&
-        Math.abs(zed.y - target.y) < 32 &&
+        Math.abs(zed.y - target.y) <= 30 &&
         target.alive
       );
       // Movement conditionals:
@@ -470,7 +481,7 @@ function createZombie(timer, x=0, y=0, random=true) {
     target1.stun(400);
     target1.setVelocityY(-150);
     let velocity = 400 + Math.abs(player.body.velocity.x)*2;
-    target1.body.velocity.x = (target1.flipX) ? velocity : -velocity;
+    target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
     target2.destroy();
     parentThis.physics.world.removeCollider(zed.collider);
     parentThis.physics.world.removeCollider(zed.punchCollider);
@@ -483,7 +494,6 @@ function createZombie(timer, x=0, y=0, random=true) {
   zed.punchCollider = parentThis.physics.add.overlap(...zed.punchboxArgs);
   
   zed.changeDir = (zed, node) => {
-    console.log(node.x);
     if (zed.wandering && zed.body.touching.down) {
       if (zed.x <= node.x) {
         wanderDirection = true;
@@ -527,7 +537,7 @@ let level = [
   'ssssssssssssssssssssss',
   'nnnnnnnnnnnnnnnnnnnnnn',
   'nnnnnnnnnnnnnnnnnnnnnn',
-  'znnnnnnnnennnnnnnennnz',
+  'znnnnnnnnennnnnnnnnnnz',
   'gggggggggnnnnnnnnngggg',
   'rrrrrrrnnnngnnnnnnnrrr',
   'rrnnnnnnnnnnnngnnnnnrr',
@@ -552,6 +562,24 @@ function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
 }
 
+function getValidItemSpawnAreas(level) {
+  let res = [];
+  for (let row = 2; row < level.length; row++) {
+    for (let col = 1; col < level[row].length - 1; col++) {
+      let conditions = (
+        spriteForKey.hasOwnProperty(level[row][col]) &&
+        level[row-1][col] == 'n'
+      );
+      if (conditions) {
+        res.push([col * 16 - 8, (row-1) * 16 + 8]);
+      }
+    }
+  }
+  return res;
+}
+
+let ValidItemSpawnAreas = getValidItemSpawnAreas(level);
+
 function create() {
   parentThis = this;
 
@@ -560,6 +588,7 @@ function create() {
   platforms = this.physics.add.staticGroup();
   punchboxes = this.physics.add.staticGroup();
   edgeNodes = this.physics.add.staticGroup();
+  grass = this.physics.add.staticGroup();
 
   for (let i = 0; i < level.length; i++) {
     let row = level[i];
@@ -579,6 +608,35 @@ function create() {
       }
     }
   }
+
+  // Pickupables:
+
+  coins = this.physics.add.group();
+  coins.setDepth(0, 0);
+
+  coins.pickup = (player, coin) => {
+    player.addScore(250);
+    parentThis.sound.play('pickup');
+    coins.remove(coin, true, true);
+  }
+
+  coins.createCoin = (posX, posY) => {
+    coins.create(posX, posY, 'coin');
+    let lastCoin = coins.children.entries[coins.children.entries.length-1];
+    lastCoin.setDepth(1);
+    let destroy = () => {
+      coins.remove(lastCoin, true, true);
+    };
+    parentThis.time.delayedCall(5000, destroy);
+  }
+
+  coins.createCoinRandom = () => {
+    let position = Phaser.Math.RND.pick(ValidItemSpawnAreas);
+    coins.createCoin(...position);
+  }
+
+  let csArgs = {delay: 15000, callback: coins.createCoinRandom, repeat: -1};
+  let coinSpawner = this.time.addEvent(csArgs);
 
   // Actor stuff:
 
@@ -606,7 +664,7 @@ function create() {
   }
 
   player.punch = () => {
-    parentThis.sound.play('punch');
+    player.playSoundPunch();
     player.anims.play('playerPunch');
     player.isPunching = true;
     player.punchAnimPlay = true;
@@ -619,6 +677,8 @@ function create() {
   }
 
   this.physics.add.collider(player, platforms);
+  this.physics.add.collider(coins, platforms);
+  this.physics.add.overlap(player, coins, coins.pickup, null, parentThis);
 
   // Collision detection for player and zombies:
   player.colliders = {};
