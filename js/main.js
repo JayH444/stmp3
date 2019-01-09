@@ -81,6 +81,8 @@ function preload() {
   //Images and sound effects:
   this.load.image('sky', 'assets/sky.png');
   this.load.image('groundgrass', 'assets/groundgrass.png');
+  this.load.image('grass1', 'assets/grass1.png');
+  this.load.image('grass2', 'assets/grass2.png');
   this.load.image('ground', 'assets/ground.png');
   this.load.image('scoreboard', 'assets/scoreboard.png');
   this.load.image('heart', 'assets/heart.png');
@@ -578,6 +580,7 @@ function getValidItemSpawnAreas(level) {
   return res;
 }
 
+
 let ValidItemSpawnAreas = getValidItemSpawnAreas(level);
 
 function create() {
@@ -607,6 +610,11 @@ function create() {
         console.log(message);
       }
     }
+  }
+
+  for (let area of ValidItemSpawnAreas) {
+    let ranSprite = Phaser.Math.RND.pick(['grass1', 'grass2']);
+    grass.create(area[0], area[1], ranSprite);
   }
 
   // Pickupables:
