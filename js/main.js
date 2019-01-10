@@ -1,7 +1,7 @@
 "use strict";
 
 // Todo: clean up code (more functional/OOP), add
-// level generation, add health pickups, add coins.
+// random level generation.
 
 // Phaser scenes and configuration:
 
@@ -79,36 +79,40 @@ function init() {
 function preload() {
 
   //Images and sound effects:
-  this.load.image('sky', 'assets/sky.png');
-  this.load.image('groundgrass', 'assets/groundgrass.png');
-  this.load.image('grass1', 'assets/grass1.png');
-  this.load.image('grass2', 'assets/grass2.png');
-  this.load.image('ground', 'assets/ground.png');
-  this.load.image('scoreboard', 'assets/scoreboard.png');
-  this.load.image('heart', 'assets/heart.png');
-  this.load.image('punchbox', 'assets/punchcollisionbox.png');
-  this.load.image('edgenode', 'assets/edgenode.png');
-  this.load.image('coin', 'assets/coin.png');
+  let fs = require('fs');
+  let files = fs.readdirSync('../Dev/GameData/assets');
+  for (let file of files) {
+    // Loop for loading the images in the assets directory.
+    // Automatically names them.
+    // !!!Ignores files with a 'spritesheet_' prefix!!!
+    // Spritesheets need to be loaded manually.
+    let pattern = /(\w+)\.png/;
+    this.load.image(file.match(pattern)[1], 'assets/' + file);
+  }
 
   // Font spritesheet. Uses ASCII values minus 32.
-  this.load.spritesheet('fontmap', 'assets/font.png', 
+  this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
     {frameWidth: 8, frameHeight: 8}
   );
   // Player spritesheet:
-  this.load.spritesheet('player', 'assets/dude.png', 
+  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
     {frameWidth: 16, frameHeight: 16}
   );
   // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/zombie.png',
+  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
     {frameWidth: 16, frameHeight: 16}
   );
 
-  // Sound effects:
-  this.load.audio('jump', 'sfx/jump.wav');
-  this.load.audio('punch1', 'sfx/punch1.wav');
-  this.load.audio('punch2', 'sfx/punch2.wav');
-  this.load.audio('punch3', 'sfx/punch3.wav');
-  this.load.audio('pickup', 'sfx/pickup.wav');
+  // Sound effect loader:
+
+  files = fs.readdirSync('../Dev/GameData/sfx');
+  for (let file of files) {
+    // Loop for loading the sounds in the sfx directory.
+    // Automatically names them.
+    // Uses \w+ just in case there's any weird sound file extensions:
+    let pattern = /(\w+)\.\w+/;
+    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
+  }
 }
 
 
@@ -121,6 +125,7 @@ let centerX = config.width/2;
 let centerY = config.height/2;
 let player;
 let coins;
+let food;
 let platforms;
 let grass;
 let punchboxes;
@@ -171,6 +176,9 @@ function debuggingMenu() {
   };
 }
 
+function pickRandomSprite(arr) {
+  return Phaser.Math.RND.pick(arr);
+}
 
 function createActor(actor, name, speed) {  
   // Mixin for creating general actor methods and properties.
@@ -250,7 +258,7 @@ function createActor(actor, name, speed) {
   }
 
   actor.playSoundPunch = () => {
-    let s = Phaser.Math.RND.pick(['punch1', 'punch2', 'punch3']);
+    let s = pickRandomSprite(['punch1', 'punch2', 'punch3']);
     parentThis.sound.play(s);
   }
 
@@ -279,8 +287,7 @@ function createActor(actor, name, speed) {
           actor.playSoundPunch();
           target1.health--;
           if (target1.hb.length) {
-            target1.hb[0].destroy();
-            target1.hb.shift();
+            target1.hb[2 - target1.health].setVisible(false);
           }
         }
         target1.stun(200, true);
@@ -613,38 +620,97 @@ function create() {
   }
 
   for (let area of ValidItemSpawnAreas) {
-    let ranSprite = Phaser.Math.RND.pick(['grass1', 'grass2']);
+    let ranSprite = pickRandomSprite(['grass1', 'grass2']);
     grass.create(area[0], area[1], ranSprite);
   }
 
   // Pickupables:
 
+  // Array for storing the pickupables:
+  let pickupables = [];
+  // Used when generating overlap colliders.
+
+  function mixinPickupableMethods(p, sprite, destructTime) {
+    // Mixin for generic pickupable methods.
+
+    p.pickup = (player, child) => {
+      player.addScore(250);
+      parentThis.sound.play('pickup');
+      p.remove(child, true, true);
+    }
+
+    p.spawn = (posX, posY) => {
+      p.create(posX, posY, sprite);
+      let lastInst = p.children.entries[p.children.entries.length-1];
+      lastInst.setDepth(1);
+      let destroy = () => {
+        p.remove(lastInst, true, true);
+      }
+      parentThis.time.delayedCall(destructTime, destroy);
+    }
+    
+    p.spawnRandom = () => {
+      // Selects a random position from the valid spawn areas:
+      let position = pickRandomSprite(ValidItemSpawnAreas);
+      p.spawn(...position);
+    }
+
+    pickupables.push(p);
+
+  }
+
   coins = this.physics.add.group();
   coins.setDepth(0, 0);
 
-  coins.pickup = (player, coin) => {
-    player.addScore(250);
-    parentThis.sound.play('pickup');
-    coins.remove(coin, true, true);
-  }
+  mixinPickupableMethods(coins, 'coin', 5000)
 
-  coins.createCoin = (posX, posY) => {
-    coins.create(posX, posY, 'coin');
-    let lastCoin = coins.children.entries[coins.children.entries.length-1];
-    lastCoin.setDepth(1);
-    let destroy = () => {
-      coins.remove(lastCoin, true, true);
-    };
-    parentThis.time.delayedCall(5000, destroy);
-  }
-
-  coins.createCoinRandom = () => {
-    let position = Phaser.Math.RND.pick(ValidItemSpawnAreas);
-    coins.createCoin(...position);
-  }
-
-  let csArgs = {delay: 15000, callback: coins.createCoinRandom, repeat: -1};
+  let csArgs = {delay: 15000, callback: coins.spawnRandom, repeat: -1};
   let coinSpawner = this.time.addEvent(csArgs);
+
+// Food spawning:
+
+  food = this.physics.add.group();
+  food.setDepth(0, 0);
+
+  mixinPickupableMethods(food, 'burger', 10000)
+
+  food.pickup = (player, burger) => {
+    player.addScore(500);
+    player.addHealth();
+    parentThis.sound.play('gethealth');
+    food.remove(burger, true, true);
+  }
+
+  food.spawn = (posX, posY) => {
+    let foodList = ['burger', 'hotdog', 'chicken', 'sandwich'];
+    food.create(posX, posY, pickRandomSprite(foodList));
+    let lastInst = food.children.entries[food.children.entries.length-1];
+    lastInst.setDepth(1);
+    let destroy = () => {
+      food.remove(lastInst, true, true);
+    }
+    parentThis.time.delayedCall(10000, destroy);
+  }
+
+  let fsArgs = {
+    delay: 3000,
+    callback: pickupableTimer,
+    callbackScope: this
+  };
+
+  let foodSpawner = this.time.addEvent(fsArgs);
+
+  function pickupableTimer () {
+      food.spawnRandom();
+      let resetArgs = {
+        delay: Phaser.Math.Between(15000, 30000),
+        callback: pickupableTimer,
+        callbackScope: this,
+        repeat: 1
+      };
+      foodSpawner.reset(resetArgs);
+  };
+
 
   // Actor stuff:
 
@@ -671,6 +737,16 @@ function create() {
     player.hb.unshift(this.add.image(pos, 8, 'heart'));
   }
 
+  player.addHealth = () => {
+    if (player.health < 3) {
+      player.health++;
+      player.hb[3 - player.health].setVisible(true);
+    }
+    else {
+      player.addScore(500);
+    }
+  }
+
   player.punch = () => {
     player.playSoundPunch();
     player.anims.play('playerPunch');
@@ -685,8 +761,10 @@ function create() {
   }
 
   this.physics.add.collider(player, platforms);
-  this.physics.add.collider(coins, platforms);
-  this.physics.add.overlap(player, coins, coins.pickup, null, parentThis);
+  for (let p of pickupables) {
+    this.physics.add.collider(p, platforms);
+    this.physics.add.overlap(player, p, p.pickup, null, parentThis);
+  }
 
   // Collision detection for player and zombies:
   player.colliders = {};
