@@ -1,7 +1,8 @@
 "use strict";
 
 // Todo: clean up code (more functional/OOP), add
-// random level generation.
+// random level generation, make items not spawn on player, fix minor
+// punch repeating bug.
 
 // Phaser scenes and configuration:
 
@@ -157,7 +158,6 @@ function printText(str, x, y, id) {
   textObjects[id] = wordImages;
 }
 
-
 function destroyText(key) {
   // Removes a text element.
   for (let i of textObjects[key]) {
@@ -166,6 +166,12 @@ function destroyText(key) {
   delete textObjects[key];
 }
 
+function calculateDistance(target1x, target1y, target2x, target2y) {
+  // Calculates the absolute distance between two targets.
+  let deltaXSquared = Math.pow(Math.abs(target1x - target2x), 2);
+  let deltaYSquared = Math.pow(Math.abs(target1y - target2y), 2);
+  return Math.round(Math.sqrt(deltaXSquared + deltaYSquared));
+}
 
 function debuggingMenu() {
   // Constructor for creating a debug menu.
@@ -179,6 +185,7 @@ function debuggingMenu() {
 function pickRandomSprite(arr) {
   return Phaser.Math.RND.pick(arr);
 }
+
 
 function createActor(actor, name, speed) {  
   // Mixin for creating general actor methods and properties.
@@ -652,6 +659,12 @@ function create() {
     p.spawnRandom = () => {
       // Selects a random position from the valid spawn areas:
       let position = pickRandomSprite(ValidItemSpawnAreas);
+      let distArgs = [position[0], position[1], player.x, player.y];
+      // Prevents items from spawning on the player:
+      while (calculateDistance(...distArgs) < 32) {
+        position = pickRandomSprite(ValidItemSpawnAreas);
+        distArgs = [position[0], position[1], player.x, player.y];
+      }
       p.spawn(...position);
     }
 
