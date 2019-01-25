@@ -1,8 +1,8 @@
 "use strict";
 
-// Todo: clean up code (more functional/OOP), add
-// random level generation, make items not spawn on player, fix minor
-// punch repeating bug.
+// Todo: clean up code (more functional/OOP), add a timer, add resetting,
+// add a win state, add level advancement, add random level generation,
+// fix minor punch repeating bug. (barely noticable but still...)
 
 // Phaser scenes and configuration:
 
@@ -59,19 +59,8 @@ var config = {
       debug: false
     }
   },
-  //init: init,
   scene: [mainScene, pausedScene]
 };
-
-// Initialization for pixel scaling:
-
-function init() {
-  game.scale.scaleMode = Phaser.ScaleManager.USER_SCALE;
-  // game.scale.setUserScale(4, 4);
-  // enable crisp rendering
-  game.renderer.renderSession.roundPixels = true;
-  Phaser.Canvas.setImageRenderingCrisp(this.game.canvas);
-}
 
 
 // Main game functions & loop:
@@ -687,11 +676,10 @@ function create() {
 
   mixinPickupableMethods(food, 'burger', 10000)
 
-  food.pickup = (player, burger) => {
-    player.addScore(500);
+  food.pickup = (player, foodItem) => {
     player.addHealth();
     parentThis.sound.play('gethealth');
-    food.remove(burger, true, true);
+    food.remove(foodItem, true, true);
   }
 
   food.spawn = (posX, posY) => {
@@ -756,7 +744,7 @@ function create() {
       player.hb[3 - player.health].setVisible(true);
     }
     else {
-      player.addScore(500);
+      player.addScore(1000);
     }
   }
 
@@ -806,8 +794,30 @@ function create() {
 }
 
 
+function reset() {
+  // Resets the game.
+  // Reverts global variables to their starting values where applicable.
+  zombiesFilter = false;
+  zombies = [];
+  zombieUsedIDs = [];
+  zombiesAlive = 0;
+  zombieSpawnpoints = [];
+  paused = false;
+  randBool = true;
+  textArr = [];
+  textObjects = {};
+  parentThis.scene.restart();
+}
+
+
 function update() {
   parentThis = this;
+  if (cursors.left.isDown &&
+    cursors.right.isDown &&
+    cursors.b.isDown &&
+    cursors.a.isDown) {
+    reset();
+  }
 
   if (cursors.p.isDown & !paused) {
     paused = true;
