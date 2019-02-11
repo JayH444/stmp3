@@ -1,8 +1,9 @@
 "use strict";
 
-// Todo: clean up code (more functional/OOP), add a timer, add resetting,
-// add a win state, add level advancement, add random level generation,
-// fix minor punch repeating bug. (barely noticable but still...)
+// Todo: convert constructor funcs to classes where applicable,
+// add a timer, add resetting, add a win state, add level advancement,
+// add random level generation. 
+// Also: fix minor punch repeating bug. (barely noticable but still...)
 
 // Phaser scenes and configuration:
 
@@ -147,6 +148,15 @@ function printText(str, x, y, id) {
   textObjects[id] = wordImages;
 }
 
+function updateText(textId, getText) {
+  // General function for updating text. getText referrs to
+  // the 'get' method for the given text, e.g. player.getScore,
+  // gameTimer.getTimeRemaining, etc.
+  textObjects[textId].forEach((img, i) => {
+    img.setTexture('fontmap', getText()[i].charCodeAt(0) - 32);
+  });
+}
+
 function destroyText(key) {
   // Removes a text element.
   for (let i of textObjects[key]) {
@@ -175,6 +185,30 @@ function pickRandomSprite(arr) {
   return Phaser.Math.RND.pick(arr);
 }
 
+class gameTimer {
+  constructor() {
+    this.timeRemaining = 10;
+    this.getTimeRemaining = () => {
+      return this.timeRemaining.toString().padStart(3, '0');
+    };
+    this.resetTime = () => {
+      this.timeRemaining = 10;
+    };
+    this.tickTimer = () => {
+      this.timeRemaining--;
+      if (this.timeRemaining === -1) {
+        this.resetTime();
+      }
+      updateText('timeRemaining', this.getTimeRemaining);
+    };
+    this.startTimer = () => {
+      let gameTimerEventArgs = {
+        delay: 1000, callback: this.tickTimer, repeat: -1
+      };
+      parentThis.time.addEvent(gameTimerEventArgs);
+    };
+  }
+}
 
 function createActor(actor, name, speed) {  
   // Mixin for creating general actor methods and properties.
@@ -719,7 +753,7 @@ function create() {
   createActor(player, 'player', 160, this);
   player.setCollideWorldBounds(true);
   player.score = 0;
-  player.getScore = () => player.score.toString().padStart(7, "0");
+  player.getScore = () => player.score.toString().padStart(7, '0');
   player.holdingJump = false;
   player.holdingPunch = false;
   player.isPunching = false;
@@ -728,9 +762,10 @@ function create() {
   player.hb = [];  // Array for pointers to the health bar images.
   player.addScore = (points) => {
     player.score += points;
-    textObjects.playerScore.forEach((img, i) => {
+    updateText('playerScore', player.getScore);
+    /*textObjects.playerScore.forEach((img, i) => {
       img.setTexture('fontmap', player.getScore()[i].charCodeAt(0) - 32);
-    });
+    });*/
   };
   // Player health bar:
   for (let i = 0; i < player.health; i++) {
@@ -775,8 +810,13 @@ function create() {
     player.colliders[zed.id] = zed.collider;
   }
 
+  // Game timer:
+  let theTimer = new gameTimer();
   printText('SCORE:', 8, 8, 'scoreText');
-  printText(player.getScore(), 8 + 48, 8, 'playerScore')
+  printText(player.getScore(), 8 + 48, 8, 'playerScore');
+  printText('TIME:', 128, 8, 'timeText');
+  printText(theTimer.getTimeRemaining(), 128 + 40, 8, 'timeRemaining');
+  theTimer.startTimer();
 
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
