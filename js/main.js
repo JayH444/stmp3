@@ -1,14 +1,14 @@
 "use strict";
 
 // Todo: convert constructor funcs to classes where applicable,
-// add a timer, add resetting, add a win state, add level advancement,
-// add random level generation. 
-// Also: fix minor punch repeating bug. (barely noticable but still...)
+// add timer fail state, add a win state, add level advancement,
+// add random level generation, make level generation use separate text files for components.
+// Also: Fix jumping big, and fix minor punch repeating bug. (barely noticable but still...)
 
 // Phaser scenes and configuration:
 
- // For some reason, preload, create, etc has to use normal function syntax
- // instead of arrow functions. IT WILL NOT WORK OTHERWISE!!!
+// For some reason, preload, create, etc has to use normal function syntax
+// instead of arrow functions. IT WILL NOT WORK OTHERWISE!!!
 
 let mainScene = new Phaser.Class({
   Extends: Phaser.Scene,
@@ -148,21 +148,47 @@ function printText(str, x, y, id) {
   textObjects[id] = wordImages;
 }
 
+function changeText(textId, newText) {
+  // General function for changing text. E.g. change 'banana' to 'cool guy'.
+  if (newText.length === 0) {
+    console.log('Cannot change text object length to zero.')
+    return;
+  }
+  let currText = textObjects[textId];
+  let x = currText[0].x;
+  let y = currText[0].y;
+  for (let i of currText) {
+    i.destroy();
+  }
+  textObjects[textId] = [];
+  currText = textObjects[textId];
+  for (let i in newText) {
+    let charCode = newText.charCodeAt(i) - 32;
+    let l = parentThis.add.image(x, y, 'fontmap', charCode)
+    currText.push(l);
+    x += 8;
+  }
+}
+
 function updateText(textId, getText) {
-  // General function for updating text. getText referrs to
-  // the 'get' method for the given text, e.g. player.getScore,
-  // gameTimer.getTimeRemaining, etc.
+  // General function for updating text. More performance-friendly than 
+  // changeText(). This CANNOT alter the length of text!!! 
+  // Use "changeText" for that instead.
+  // getText referrs to the 'get' method for the given text, 
+  // e.g. player.getScore, gameTimer.getTimeRemaining, etc.
+  let newText = getText();
   textObjects[textId].forEach((img, i) => {
-    img.setTexture('fontmap', getText()[i].charCodeAt(0) - 32);
+    img.setTexture('fontmap', newText.charCodeAt(i) - 32);
   });
 }
 
-function destroyText(key) {
+function destroyText(textId) {
   // Removes a text element.
-  for (let i of textObjects[key]) {
+  for (let i of textObjects[textId]) {
     i.destroy();
   }
-  delete textObjects[key];
+  textObjects[textId] = undefined;
+  delete textObjects[textId];
 }
 
 function calculateDistance(target1x, target1y, target2x, target2y) {
@@ -186,17 +212,23 @@ function pickRandomSprite(arr) {
 }
 
 class gameTimer {
+  // Class for the game timer and its properties and methods.
   constructor() {
-    this.timeRemaining = 10;
+    this.timeRemaining = 5;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
     this.resetTime = () => {
-      this.timeRemaining = 10;
+      this.timeRemaining = 5;
     };
     this.tickTimer = () => {
       this.timeRemaining--;
       if (this.timeRemaining === -1) {
+        //player.die();
+        /*for (let z of zombies) {
+          z.die();
+        }
+        zombiesAlive = 0;*/
         this.resetTime();
       }
       updateText('timeRemaining', this.getTimeRemaining);
@@ -400,7 +432,7 @@ let zombieSpawnpoints = [];
 
 
 function createZombie(timer, x=0, y=0, random=true) {
-  // Creates a zombie. startPos is a tuple of the 
+  // Creates a zombie.
   // Prevents more than ten zombies at a time from spawning:
   if (zombiesAlive >= 10) return;
   zombiesAlive++;
@@ -548,10 +580,6 @@ function createZombie(timer, x=0, y=0, random=true) {
   zombies.push(zed);
 }
 
-function createZombieSpawn(x, y) {
-  zombieSpawnpoints.push([x, y])
-}
-
 let debugMenu = new debuggingMenu();
 
 // Tilemap for the level:
@@ -570,36 +598,43 @@ let debugMenu = new debuggingMenu();
   Ground w/o grass (rocks) = r,
   Nothing (sky) = n,
   Edge node left (for NPCs) = e
- */
+*/
 
-let level = [
-  'ssssssssssssssssssssss',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnn',
-  'znnnnnnnnennnnnnnnnnnz',
-  'gggggggggnnnnnnnnngggg',
-  'rrrrrrrnnnngnnnnnnnrrr',
-  'rrnnnnnnnnnnnngnnnnnrr',
-  'nnnnnnnnnnnnnnrgnnnnnn',
-  'nnnnnnnnnnnnnnnnnnnnnz',
-  'nnnnnnnnnnnnnngggggggg',
-  'nngnnnnnennnggrrnnnnnn',
-  'nnnnnnnnngggrnnnnnnnnn',
-  'nnnnnngnnnnnnnnnnnnnnn',
-  'znnnnnnnnnnnngnnnnnnnz',
-  'gggggggggggggrgggggggg'
-];
+
+function loadLevels() {
+  let fs = require('fs');
+  let fileNames = fs.readdirSync('../Dev/GameData/levels');
+  let res = [];
+  for (let file of fileNames) {
+    let level = fs
+      .readFileSync(`../Dev/GameData/levels/${file}`, 'utf-8')
+      .split(/\r\n|\n/);  // Windows and Linux/Unix compatible!
+    res.push(level);
+  }
+  return res;
+}
+
+let gameLevels = loadLevels();
+
+let level = Phaser.Math.RND.pick(gameLevels);
 
 let spriteForKey = {
   g: 'groundgrass', r: 'ground', s: 'scoreboard',
 };
-let functionForKey = {
-  z: createZombieSpawn, e: createEdgeNode
-};
+
 
 function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
 }
+
+function createZombieSpawn(x, y) {
+  zombieSpawnpoints.push([x, y])
+}
+
+let functionForKey = {
+  z: createZombieSpawn, e: createEdgeNode
+};
+
 
 function getValidItemSpawnAreas(level) {
   let res = [];
@@ -642,9 +677,8 @@ function create() {
         functionForKey[row[j]](x, y);
       }
       else if (row[j] != 'n') {
-        let message = 'Unknown map element "' + row[j] + '"' +
-          ' at row ' + (i+1) + ', col ' + (j+1) + '.';
-        console.log(message);
+        let msg = `Unknown map element "${row[j]}" at row ${i+1}, col ${j+1}.`
+        console.log(msg);
       }
     }
   }
@@ -763,9 +797,6 @@ function create() {
   player.addScore = (points) => {
     player.score += points;
     updateText('playerScore', player.getScore);
-    /*textObjects.playerScore.forEach((img, i) => {
-      img.setTexture('fontmap', player.getScore()[i].charCodeAt(0) - 32);
-    });*/
   };
   // Player health bar:
   for (let i = 0; i < player.health; i++) {
