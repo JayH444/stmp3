@@ -213,22 +213,24 @@ function pickRandomSprite(arr) {
 
 class gameTimer {
   // Class for the game timer and its properties and methods.
-  constructor() {
-    this.timeRemaining = 5;
+  constructor(enemyManager) {
+    this.timeRemaining = 90;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
     this.resetTime = () => {
-      this.timeRemaining = 5;
+      this.timeRemaining = 90;
     };
     this.tickTimer = () => {
       this.timeRemaining--;
       if (this.timeRemaining === -1) {
-        //player.die();
-        /*for (let z of zombies) {
-          z.die();
+        if (enemyManager.enemyCount > 0) {
+          player.die();
+          for (let z of zombies) {
+            z.die();
+          }
+          zombiesAlive = 0;
         }
-        zombiesAlive = 0;*/
         this.resetTime();
       }
       updateText('timeRemaining', this.getTimeRemaining);
@@ -239,6 +241,23 @@ class gameTimer {
       };
       parentThis.time.addEvent(gameTimerEventArgs);
     };
+  }
+}
+
+class EnemyManagerClass {
+  constructor() {
+    this.enemyCount = Math.floor(Math.random()*12 + 12);
+    this.decrement = this.decrement.bind(this);
+    this.getEnemyCountText = this.getEnemyCountText.bind(this);
+  }
+  getEnemyCountText() {
+    return this.enemyCount.toString().padStart(3, '0');
+  }
+  decrement() {
+    if (this.enemyCount > 0) {
+      this.enemyCount--;
+      updateText('foesLeft', this.getEnemyCountText);
+    }
   }
 }
 
@@ -333,6 +352,9 @@ function createActor(actor, name, speed) {
       parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
       if (target1.hasOwnProperty('addScore')) {
         target1.addScore(100);
+      }
+      if (target1.hasOwnProperty('addKill')) {
+        target1.addKill();
       }
       parentThis.physics.world.removeCollider(target2.punchCollider);
       target2.die();
@@ -559,6 +581,7 @@ function createZombie(timer, x=0, y=0, random=true) {
     target1.die();
     zombiesAlive--;
     player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
+    player.addKill();
   }
   // Adding punch collision:
   zed.punchboxArgs = [zed, punchboxes, zed.getHit, null, parentThis];
@@ -582,30 +605,16 @@ function createZombie(timer, x=0, y=0, random=true) {
 
 let debugMenu = new debuggingMenu();
 
-// Tilemap for the level:
 
-/*
-  Levels consist of an array from 15 strings forming the rows,
-  where each character represents a 16x16 pixel tile. 
-  There are 22 columns total, 20 of which are visible.
-  The remaining 4 are for offscreen things like zombie spawners
-  and offscreen platforms for the zombies to stand on.
-
-  Legend:
-  
-  Scoreboard = s,
-  Ground w/ grass = g,
-  Ground w/o grass (rocks) = r,
-  Nothing (sky) = n,
-  Edge node left (for NPCs) = e
-*/
-
+// Level loading code
 
 function loadLevels() {
+  // Loads the levels of the game in the "levels" folder.
   let fs = require('fs');
   let fileNames = fs.readdirSync('../Dev/GameData/levels');
   let res = [];
   for (let file of fileNames) {
+    if (file == 'readme.txt') continue;
     let level = fs
       .readFileSync(`../Dev/GameData/levels/${file}`, 'utf-8')
       .split(/\r\n|\n/);  // Windows and Linux/Unix compatible!
@@ -788,19 +797,25 @@ function create() {
   player.setCollideWorldBounds(true);
   player.score = 0;
   player.getScore = () => player.score.toString().padStart(7, '0');
+  player.addScore = (points) => {
+    player.score += points;
+    updateText('playerScore', player.getScore);
+  };
+  player.kills = 0;
+  player.getKills = () => player.kills.toString().padStart(3, '0');
+  player.addKill = () => {
+    player.kills++;
+    gameEnemyManager.decrement();
+  }
   player.holdingJump = false;
   player.holdingPunch = false;
   player.isPunching = false;
   player.punchAnimPlay = false;
   player.punchCoolingDown = false;
   player.hb = [];  // Array for pointers to the health bar images.
-  player.addScore = (points) => {
-    player.score += points;
-    updateText('playerScore', player.getScore);
-  };
   // Player health bar:
   for (let i = 0; i < player.health; i++) {
-    let pos = config.width - 8 - (i * 16);
+    let pos = config.width - 8 - (i * 12);
     player.hb.unshift(this.add.image(pos, 8, 'heart'));
   }
 
@@ -841,12 +856,21 @@ function create() {
     player.colliders[zed.id] = zed.collider;
   }
 
+  // Game enemy manager:
+  let gameEnemyManager = new EnemyManagerClass();
   // Game timer:
-  let theTimer = new gameTimer();
-  printText('SCORE:', 8, 8, 'scoreText');
-  printText(player.getScore(), 8 + 48, 8, 'playerScore');
-  printText('TIME:', 128, 8, 'timeText');
-  printText(theTimer.getTimeRemaining(), 128 + 40, 8, 'timeRemaining');
+  let theTimer = new gameTimer(gameEnemyManager);
+
+  // Game topbar text:  
+  let scoreX = 8;
+  printText('SCORE:', scoreX, 8, 'scoreText');
+  printText(player.getScore(), scoreX + 48, 8, 'playerScore');
+  let foesX = 130;
+  printText('FOES:', foesX, 8, 'foesText');
+  printText(gameEnemyManager.getEnemyCountText(), foesX + 40, 8, 'foesLeft');
+  let timeX = 212;
+  printText('TIME:', timeX, 8, 'timeText');
+  printText(theTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
   theTimer.startTimer();
 
   // This creates the keybinds:
