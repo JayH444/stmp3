@@ -1,9 +1,8 @@
 "use strict";
 
 // Todo: convert constructor funcs to classes where applicable,
-// add timer fail state, add a win state, add level advancement,
-// add random level generation, make level generation use separate text files for components.
-// Also: Fix jumping big, and fix minor punch repeating bug. (barely noticable but still...)
+// add level advancement, add random level generation
+// Also: Fix jumping bug, and fix minor punch repeating bug. (barely noticable but still...)
 
 // Phaser scenes and configuration:
 
