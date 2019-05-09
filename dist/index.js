@@ -287,7 +287,7 @@ class titleScene extends Phaser.Scene {
 }
 
 function titlePreload() {
-  parentThis = this;
+  //parentThis = this;
   // Font spritesheet. Uses ASCII values minus 32.
   /*this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
     {frameWidth: 8, frameHeight: 8}
@@ -295,12 +295,12 @@ function titlePreload() {
 }
 
 function titleCreate() {
-  parentThis = this;
+  //parentThis = this;
   //printText('Hello World!', centerX, centerY, 'titleText');
 }
 
 function titleUpdate() {
-  parentThis = this;
+  //parentThis = this;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

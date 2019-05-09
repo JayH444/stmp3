@@ -1,7 +1,7 @@
 # stdp3
-Super Turbo Dude Puncher... **THREE!**
+Super Turbo Monster Puncher... **THREE!**
 
-Monsters are taking over the town! Are you a bad enough dude to punch them all?
+Deadly creeps are taking over the town! Are you a bad enough dude to punch them all?
 
 
 Controls:
