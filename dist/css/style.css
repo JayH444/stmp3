@@ -1,0 +1,22 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 960px !important;
+    height: 720px !important;
+    overflow: hidden;
+}
+canvas {
+    width: 960px !important;
+    height: 720px !important;
+    image-rendering: pixelated !important;
+}
+#debug-menu {
+    position: fixed;
+    left: 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 32px;
+    top: 64px;
+}
+#debug-menu p {
+    margin: 16px 0;
+}
