@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="vendor/phaser.js"></script>
+  <script>
+    // Fixes the windows size issues NW.js seems to have:
+    let win = nw.Window.get();
+    let rightHeight = win.appWindow.innerBounds.height == 720 - 11;
+    let rightWidth = win.appWindow.innerBounds.width == 960 - 11;
+    // For whatever reason, the innerBounds window size 
+    // has to be the desired size minus 11px.
+    if (!rightHeight || !rightWidth) {
+      win.resizeTo(960 + 6, 720 + 28);
+    }
+  </script>
+
+  <link rel="stylesheet" href="css/style.css">
+
+</head>
+<body>
+  <div id="debug-menu">
+    <p></p>
+    <p></p>
+  </div>
+
+  <script src="index.js"></script>
+
+</body>
+</html>
