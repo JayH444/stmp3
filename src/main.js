@@ -38,6 +38,9 @@ let zombieUsedIDs = [];
 let zombiesAlive = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
+let noAI = false;
+let noTarget = false;
+let spawnEnemies = true;
 
 // Global variables:
 

@@ -136,7 +136,9 @@ function create() {
   });
   
   let timerArgs = {delay: 3000, callback: CreateRandomZombie, repeat: -1};
-  zombieTimer = this.time.addEvent(timerArgs);
+  if (spawnEnemies) {
+    zombieTimer = this.time.addEvent(timerArgs);
+  }
 
   // Pickupables:
 

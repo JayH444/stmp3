@@ -138,7 +138,9 @@ function create() {
   });
   
   let timerArgs = {delay: 3000, callback: CreateRandomZombie, repeat: -1};
-  zombieTimer = this.time.addEvent(timerArgs);
+  if (spawnEnemies) {
+    zombieTimer = this.time.addEvent(timerArgs);
+  }
 
   // Pickupables:
 
@@ -897,29 +899,35 @@ class Zombie extends Actor {
     this.move = (target) => {  // Zombie movement AI.
       if (this.alive && !this.stunned) {
         // Stuff for when the zombies sees the player:
-        this.seesPlayerRight = (
-          (this.x < target.x && !this.flipX) &&
-          Math.abs(this.y - target.y) <= 30 &&
-          target.alive
-        );
-        this.seesPlayerLeft = (
-          (this.x > target.x && this.flipX) &&
-          Math.abs(this.y - target.y) <= 30 &&
-          target.alive
-        );
-        // Movement conditionals:
-        if (this.seesPlayerLeft) {
-          this.go(-this.speed);
+        if (noAI === false) {
+          this.seesPlayerRight = (
+            (this.x < target.x && !this.flipX) &&
+            Math.abs(this.y - target.y) <= 30 &&
+            target.alive
+          );
+          this.seesPlayerLeft = (
+            (this.x > target.x && this.flipX) &&
+            Math.abs(this.y - target.y) <= 30 &&
+            target.alive
+          );
+          // Movement conditionals:
+          if (this.seesPlayerLeft && !noTarget) {
+            this.go(-this.speed);
+          }
+          else if (this.seesPlayerRight && !noTarget) {
+            this.go(this.speed);
+          }
+          else {
+            this.wander();
+          }
+          let touchingWall = this.body.blocked.left || this.body.blocked.right;
+          if (touchingWall && this.x === this.lastx) {
+            // If touching a wall and not moved since last position...
+            this.setVelocityY(-125);
+          }
         }
-        else if (this.seesPlayerRight) {
-          this.go(this.speed);
-        } else {
-          this.wander();
-        }
-        let touchingWall = this.body.blocked.left || this.body.blocked.right;
-        if (touchingWall && this.x == this.lastx) {
-          // If touching a wall and not moved since last position...
-          this.setVelocityY(-125);
+        else {
+          this.goIdle();
         }
       }
       else {
@@ -942,7 +950,7 @@ class Zombie extends Actor {
       // When a zombie gets hit, e.g. by a punch.
       target1.stun(400);
       target1.setVelocityY(-150);
-      let velocity = 400 + Math.abs(player.body.velocity.x)*2;
+      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
       target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
       punchObject.destroy();
       parentThis.physics.world.removeCollider(this.collider);
@@ -1074,6 +1082,9 @@ let zombieUsedIDs = [];
 let zombiesAlive = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
+let noAI = false;
+let noTarget = false;
+let spawnEnemies = true;
 
 // Global variables:
 
