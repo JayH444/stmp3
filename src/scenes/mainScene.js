@@ -2,7 +2,7 @@
 
 class mainScene extends Phaser.Scene {
   constructor() {
-    super({key: 'mainScene', active: true});
+    super({key: 'mainScene'});
     this.preload = preload;
     this.create = create;
     this.update = update;

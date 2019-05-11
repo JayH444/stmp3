@@ -69,8 +69,8 @@ class Zombie extends Actor {
     
     this.move = (target) => {  // Zombie movement AI.
       if (this.alive && !this.stunned) {
-        // Stuff for when the zombies sees the player:
-        if (noAI === false) {
+        if (noAI === false) { // Ignored if noAI is true.
+          // Stuff for when the zombies sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
             Math.abs(this.y - target.y) <= 30 &&
@@ -81,7 +81,7 @@ class Zombie extends Actor {
             Math.abs(this.y - target.y) <= 30 &&
             target.alive
           );
-          // Movement conditionals:
+          // Movement conditionals, ignored if noTarget is enabled:
           if (this.seesPlayerLeft && !noTarget) {
             this.go(-this.speed);
           }
