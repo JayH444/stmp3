@@ -1,3 +1,36 @@
+//- src\scenes\levelIntroScene.js -////////////////////////////////////////////
+
+// Level intro scene.
+
+class levelIntroScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'levelIntroScene'});
+    this.preload = levelIntroPreload;
+    this.create = levelIntroCreate;
+    this.update = levelIntroUpdate;
+  }
+}
+
+function levelIntroPreload() {
+  parentThis = this;
+}
+
+function levelIntroCreate() {
+  parentThis = this;
+  printText('Level 1', centerX-(7*8/2)+4, centerY, 'levelIntroText');
+  setTimeout(() => {
+    parentThis.scene.launch('mainScene');
+    parentThis.scene.stop('levelIntroScene');    
+  }, 1500);
+}
+
+function levelIntroUpdate() {
+  parentThis = this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\scenes\mainScene.js -//////////////////////////////////////////////////
 
 // Main game scene and game loop.
@@ -11,42 +44,7 @@ class mainScene extends Phaser.Scene {
   }
 }
 
-function preload() {  // Loads game assets.
-
-  //Images and sound effects:
-  let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/assets');
-  for (let file of files) {
-    // Loop for loading the images in the assets directory.
-    // Automatically names them.
-    // !!!Ignores files with a 'spritesheet_' prefix!!!
-    // Spritesheets need to be loaded manually.
-    let pattern = /(\w+)\.png/;
-    this.load.image(file.match(pattern)[1], 'assets/' + file);
-  }
-
-  // Font spritesheet. Uses ASCII values minus 32.
-  this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
-    {frameWidth: 8, frameHeight: 8}
-  );
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-
-  // Sound effect loader:
-  files = fs.readdirSync('../dev/root/dist/sfx');
-  for (let file of files) {
-    // Loop for loading the sounds in the sfx directory.
-    // Automatically names them.
-    // Uses \w+ just in case there's any weird sound file extensions:
-    let pattern = /(\w+)\.\w+/;
-    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
-  }
+function preload() {
 
   this.load.image('tiles', 'assets/game_tiles.png');
 
@@ -288,21 +286,49 @@ class titleScene extends Phaser.Scene {
   }
 }
 
-function titlePreload() {
-  parentThis = this;
+function titlePreload() {  // Loads game assets.
+
+  //Images and sound effects:
+  let fs = require('fs');
+  let files = fs.readdirSync('../dev/root/dist/assets');
+  for (let file of files) {
+    // Loop for loading the images in the assets directory.
+    // Automatically names them.
+    // !!!Ignores files with a 'spritesheet_' prefix!!!
+    // Spritesheets need to be loaded manually.
+    let pattern = /(\w+)\.png/;
+    this.load.image(file.match(pattern)[1], 'assets/' + file);
+  }
+
   // Font spritesheet. Uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
     {frameWidth: 8, frameHeight: 8}
   );
+  // Player spritesheet:
+  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
+    {frameWidth: 16, frameHeight: 16}
+  );
+  // Zombie spritesheet:
+  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
+    {frameWidth: 16, frameHeight: 16}
+  );
+
+  // Sound effect loader:
+  files = fs.readdirSync('../dev/root/dist/sfx');
+  for (let file of files) {
+    // Loop for loading the sounds in the sfx directory.
+    // Automatically names them.
+    // Uses \w+ just in case there's any weird sound file extensions:
+    let pattern = /(\w+)\.\w+/;
+    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
+  }
+  
   this.load.image('menuCursor', 'assets/menu_cursor.png');
   this.load.image('gameLogo', 'assets/game_logo.png');
 }
 
 function titleCreate() {
   parentThis = this;
-  //let titleText = 'Super Turbo Monster Puncher 3';
-  //let titleX = centerX-(titleText.length*8/2);
-  //printText(titleText, titleX, centerY-64, 'titleText');
 
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
   
@@ -326,7 +352,7 @@ function titleCreate() {
 
   window.menuFunctions = {
     playText: () => {
-      parentThis.scene.launch('mainScene');
+      parentThis.scene.launch('levelIntroScene');
       parentThis.scene.stop('titleScene');
     },
     quitText: () => {
@@ -1114,8 +1140,6 @@ function mixinPickupableMethods(p, sprite, destructTime) {
 
 //- src\main.js -//////////////////////////////////////////////////////////////
 
-// Todo: Fix zombies spawned by spawner not flying as far when punched.
-
 let config = {
   type: Phaser.WEBGL,
   width: 320,
@@ -1128,7 +1152,7 @@ let config = {
       debug: false
     }
   },
-  scene: [titleScene, mainScene, pausedScene]
+  scene: [titleScene, levelIntroScene, mainScene, pausedScene]
 };
 
 // Global variables:

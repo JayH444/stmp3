@@ -9,42 +9,7 @@ class mainScene extends Phaser.Scene {
   }
 }
 
-function preload() {  // Loads game assets.
-
-  //Images and sound effects:
-  let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/assets');
-  for (let file of files) {
-    // Loop for loading the images in the assets directory.
-    // Automatically names them.
-    // !!!Ignores files with a 'spritesheet_' prefix!!!
-    // Spritesheets need to be loaded manually.
-    let pattern = /(\w+)\.png/;
-    this.load.image(file.match(pattern)[1], 'assets/' + file);
-  }
-
-  // Font spritesheet. Uses ASCII values minus 32.
-  this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
-    {frameWidth: 8, frameHeight: 8}
-  );
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-
-  // Sound effect loader:
-  files = fs.readdirSync('../dev/root/dist/sfx');
-  for (let file of files) {
-    // Loop for loading the sounds in the sfx directory.
-    // Automatically names them.
-    // Uses \w+ just in case there's any weird sound file extensions:
-    let pattern = /(\w+)\.\w+/;
-    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
-  }
+function preload() {
 
   this.load.image('tiles', 'assets/game_tiles.png');
 

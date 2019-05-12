@@ -10,7 +10,7 @@ let config = {
       debug: false
     }
   },
-  scene: [titleScene, mainScene, pausedScene]
+  scene: [titleScene, levelIntroScene, mainScene, pausedScene]
 };
 
 // Global variables:
