@@ -1022,6 +1022,7 @@ class Zombie extends Actor {
       target1.stun(400);
       target1.setVelocityY(-150);
       let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
+      console.log(velocity);
       target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
       punchObject.destroy();
       parentThis.physics.world.removeCollider(this.collider);
@@ -1061,7 +1062,7 @@ function CreateRandomZombie() {
   let randomSpawn = parseInt(Math.random() * zombieSpawnpoints.length);
   let x = zombieSpawnpoints[randomSpawn][0];
   let y = zombieSpawnpoints[randomSpawn][1];
-  zombies.push(new Zombie(parentThis, x, y));
+  new Zombie(parentThis, x, y);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

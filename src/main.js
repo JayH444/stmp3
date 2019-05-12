@@ -1,5 +1,3 @@
-// Todo: Fix zombies spawned by spawner not flying as far when punched.
-
 let config = {
   type: Phaser.WEBGL,
   width: 320,
