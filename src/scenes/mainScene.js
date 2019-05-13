@@ -11,12 +11,11 @@ class mainScene extends Phaser.Scene {
 
 function preload() {
 
-  this.load.image('tiles', 'assets/game_tiles.png');
-
   this.load.tilemapTiledJSON(
     'theMap',
     'levelTest/test.json'
   );
+
 }
 
 function create() {

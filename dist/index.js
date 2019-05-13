@@ -17,7 +17,7 @@ function levelIntroPreload() {
 
 function levelIntroCreate() {
   parentThis = this;
-  printText('Level 1', centerX-(7*8/2)+4, centerY, 'levelIntroText');
+  printTextCenter('Level 1', 'levelIntroText');
   setTimeout(() => {
     parentThis.scene.launch('mainScene');
     parentThis.scene.stop('levelIntroScene');    
@@ -26,6 +26,118 @@ function levelIntroCreate() {
 
 function levelIntroUpdate() {
   parentThis = this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\scenes\loadingScene.js -///////////////////////////////////////////////
+
+// Loading screen scene.
+
+class loadingScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'loadingScene', active: true});
+    this.preload = loadingPreload;
+    this.create = loadingCreate;
+    this.update = loadingUpdate;
+  }
+}
+
+function setRect(rect, style, coords) {
+  rect.clear();
+  rect.fillStyle(...style);
+  rect.fillRect(...coords);
+}
+
+function loadingPreload() {  // Loads game assets.
+  parentThis = this;
+  
+  window.progressBox = this.add.graphics();
+  window.progressBar = this.add.graphics();
+
+  progressBox.fillStyle(0xbe2633, 1);
+  progressBox.fillRect(centerX-50, centerY-10, 100, 20);
+
+  this.load.on('progress', (value) => {
+    progressBar.clear();
+    progressBar.fillStyle(0xffffff, 1);
+    progressBar.fillRect(centerX-50, centerY-10, 100*value, 20);
+  });
+
+  window.loadingComplete = false;
+
+  this.load.on('complete', () => {
+    progressBox.destroy();
+    progressBox = undefined;
+    loadingComplete = true;
+  });
+
+  //Images and sound effects:
+  let fs = require('fs');
+  let files = fs.readdirSync('../dev/root/dist/assets');
+  for (let file of files) {
+    // Loop for loading the images in the assets directory.
+    // Automatically names them.
+    // !!!Ignores files with a 'spritesheet_' prefix!!!
+    // Spritesheets need to be loaded manually.
+    let pattern = /(\w+)\.png/;
+    this.load.image(file.match(pattern)[1], 'assets/' + file);
+  }
+  // Player spritesheet:
+  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
+    {frameWidth: 16, frameHeight: 16}
+  );
+  // Zombie spritesheet:
+  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
+    {frameWidth: 16, frameHeight: 16}
+  );
+
+  // Font spritesheet. Uses ASCII values minus 32.
+  this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
+    {frameWidth: 8, frameHeight: 8}
+  );
+
+  // Sound effect loader:
+  files = fs.readdirSync('../dev/root/dist/sfx');
+  for (let file of files) {
+    // Loop for loading the sounds in the sfx directory.
+    // Automatically names them.
+    // Uses \w+ just in case there's any weird sound file extensions:
+    let pattern = /(\w+)\.\w+/;
+    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
+  }
+
+  /*for (let i = 0; i < 500; i++) {
+    this.load.image('gameLogo' + i, 'assets/game_logo.png');
+  }*/
+
+  this.load.image('menuCursor', 'assets/menu_cursor.png');
+  this.load.image('gameLogo', 'assets/game_logo.png');
+  this.load.image('tiles', 'assets/game_tiles.png');
+}
+
+function loadingCreate() {
+}
+
+function loadingUpdate() {
+  parentThis = this;
+
+  if (loadingComplete) {
+    let colors = [0xb2dcef, 0x31a2f2, 0x005784, 0x1b2632, 0x000000];
+    for (let i = 0; i < colors.length; i++) {
+      let timeoutArg = () => {
+        setRect(progressBar, [colors[i], 1], [centerX-50, centerY-10, 100, 20])
+      }; 
+      setTimeout(timeoutArg, 50*(i+1));
+    }
+    let launchTitle = () => {
+      parentThis.scene.launch('titleScene');
+      parentThis.scene.stop('loadingScene');
+    }
+    setTimeout(launchTitle, 500);
+    loadingComplete = false;
+  };
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -46,12 +158,11 @@ class mainScene extends Phaser.Scene {
 
 function preload() {
 
-  this.load.image('tiles', 'assets/game_tiles.png');
-
   this.load.tilemapTiledJSON(
     'theMap',
     'levelTest/test.json'
   );
+
 }
 
 function create() {
@@ -279,52 +390,14 @@ class pausedScene extends Phaser.Scene {
 
 class titleScene extends Phaser.Scene {
   constructor() {
-    super({key: 'titleScene', active: true});
+    super({key: 'titleScene'});
     this.preload = titlePreload;
     this.create = titleCreate;
     this.update = titleUpdate;
   }
 }
 
-function titlePreload() {  // Loads game assets.
-
-  //Images and sound effects:
-  let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/assets');
-  for (let file of files) {
-    // Loop for loading the images in the assets directory.
-    // Automatically names them.
-    // !!!Ignores files with a 'spritesheet_' prefix!!!
-    // Spritesheets need to be loaded manually.
-    let pattern = /(\w+)\.png/;
-    this.load.image(file.match(pattern)[1], 'assets/' + file);
-  }
-
-  // Font spritesheet. Uses ASCII values minus 32.
-  this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
-    {frameWidth: 8, frameHeight: 8}
-  );
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-
-  // Sound effect loader:
-  files = fs.readdirSync('../dev/root/dist/sfx');
-  for (let file of files) {
-    // Loop for loading the sounds in the sfx directory.
-    // Automatically names them.
-    // Uses \w+ just in case there's any weird sound file extensions:
-    let pattern = /(\w+)\.\w+/;
-    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
-  }
-  
-  this.load.image('menuCursor', 'assets/menu_cursor.png');
-  this.load.image('gameLogo', 'assets/game_logo.png');
+function titlePreload() {
 }
 
 function titleCreate() {
@@ -334,15 +407,20 @@ function titleCreate() {
   
   window.validMenuPositions = [];
 
-  function addMenuOption(str, x, y, id) {
+  function addMenuOption(str, id, x, y) {
     validMenuPositions.push([y, id]);
     printText(str, x, y, id);
   }
 
+  function addMenuOptionCenterX(str, id, y) {
+    validMenuPositions.push([y, id]);
+    printTextCenter(str, id, y);
+  }
+
   let playText = 'Play';
   let quitText = 'Quit';
-  addMenuOption(playText, centerX-(playText.length*8/2), centerY, 'playText');
-  addMenuOption(quitText, centerX-(quitText.length*8/2), centerY+16, 'quitText');
+  addMenuOptionCenterX(playText, 'playText', centerY - 4);
+  addMenuOptionCenterX(quitText, 'quitText', centerY + 12);
 
   let menuCursorArgs = [
     textObjects['playText'][0].x-10, textObjects['playText'][0].y, 'menuCursor'
@@ -432,6 +510,10 @@ function printText(str, x, y, id) {
     offset += 8;  // Offset for each respective letter.
   }
   textObjects[id] = wordImages;
+}
+
+function printTextCenter(str, id, y=centerY-4) {
+  printText(str, centerX - (str.length*8/2)+4, y, id);
 }
 
 function changeText(textId, newText) {
@@ -1152,7 +1234,7 @@ let config = {
       debug: false
     }
   },
-  scene: [titleScene, levelIntroScene, mainScene, pausedScene]
+  scene: [loadingScene, titleScene, levelIntroScene, mainScene, pausedScene]
 };
 
 // Global variables:

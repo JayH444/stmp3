@@ -2,52 +2,14 @@
 
 class titleScene extends Phaser.Scene {
   constructor() {
-    super({key: 'titleScene', active: true});
+    super({key: 'titleScene'});
     this.preload = titlePreload;
     this.create = titleCreate;
     this.update = titleUpdate;
   }
 }
 
-function titlePreload() {  // Loads game assets.
-
-  //Images and sound effects:
-  let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/assets');
-  for (let file of files) {
-    // Loop for loading the images in the assets directory.
-    // Automatically names them.
-    // !!!Ignores files with a 'spritesheet_' prefix!!!
-    // Spritesheets need to be loaded manually.
-    let pattern = /(\w+)\.png/;
-    this.load.image(file.match(pattern)[1], 'assets/' + file);
-  }
-
-  // Font spritesheet. Uses ASCII values minus 32.
-  this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
-    {frameWidth: 8, frameHeight: 8}
-  );
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-
-  // Sound effect loader:
-  files = fs.readdirSync('../dev/root/dist/sfx');
-  for (let file of files) {
-    // Loop for loading the sounds in the sfx directory.
-    // Automatically names them.
-    // Uses \w+ just in case there's any weird sound file extensions:
-    let pattern = /(\w+)\.\w+/;
-    this.load.audio(file.match(pattern)[1], 'sfx/' + file);
-  }
-  
-  this.load.image('menuCursor', 'assets/menu_cursor.png');
-  this.load.image('gameLogo', 'assets/game_logo.png');
+function titlePreload() {
 }
 
 function titleCreate() {
@@ -57,15 +19,20 @@ function titleCreate() {
   
   window.validMenuPositions = [];
 
-  function addMenuOption(str, x, y, id) {
+  function addMenuOption(str, id, x, y) {
     validMenuPositions.push([y, id]);
     printText(str, x, y, id);
   }
 
+  function addMenuOptionCenterX(str, id, y) {
+    validMenuPositions.push([y, id]);
+    printTextCenter(str, id, y);
+  }
+
   let playText = 'Play';
   let quitText = 'Quit';
-  addMenuOption(playText, centerX-(playText.length*8/2), centerY, 'playText');
-  addMenuOption(quitText, centerX-(quitText.length*8/2), centerY+16, 'quitText');
+  addMenuOptionCenterX(playText, 'playText', centerY - 4);
+  addMenuOptionCenterX(quitText, 'quitText', centerY + 12);
 
   let menuCursorArgs = [
     textObjects['playText'][0].x-10, textObjects['playText'][0].y, 'menuCursor'

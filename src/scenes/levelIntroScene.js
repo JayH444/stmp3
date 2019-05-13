@@ -15,7 +15,7 @@ function levelIntroPreload() {
 
 function levelIntroCreate() {
   parentThis = this;
-  printText('Level 1', centerX-(7*8/2)+4, centerY, 'levelIntroText');
+  printTextCenter('Level 1', 'levelIntroText');
   setTimeout(() => {
     parentThis.scene.launch('mainScene');
     parentThis.scene.stop('levelIntroScene');    

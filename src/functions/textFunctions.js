@@ -14,6 +14,10 @@ function printText(str, x, y, id) {
   textObjects[id] = wordImages;
 }
 
+function printTextCenter(str, id, y=centerY-4) {
+  printText(str, centerX - (str.length*8/2)+4, y, id);
+}
+
 function changeText(textId, newText) {
   // General function for changing text. E.g. change 'banana' to 'cool guy'.
   if (newText.length === 0) {
