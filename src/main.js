@@ -41,6 +41,7 @@ let zombieSpawnpoints = [];
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
+let skipTitle = true;
 
 // Global variables:
 

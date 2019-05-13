@@ -97,7 +97,12 @@ function loadingUpdate() {
       setTimeout(timeoutArg, 50*(i+1));
     }
     let launchTitle = () => {
-      parentThis.scene.launch('titleScene');
+      if (!skipTitle) {
+        parentThis.scene.launch('titleScene');
+      }
+      else {
+        parentThis.scene.launch('mainScene');
+      }
       parentThis.scene.stop('loadingScene');
     }
     setTimeout(launchTitle, 500);
