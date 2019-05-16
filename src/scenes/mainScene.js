@@ -32,31 +32,37 @@ function create() {
   window.map = this.make.tilemap({key: 'theMap'});
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
+  console.log(map);
   platforms.setCollisionByProperty({collides: true});
 
-//// Entity creation code needs to be rewritten to work in tiled: /////////////
+  // Entity creation code:
 
-  for (let i = 0; i < level.length; i++) {
-    let row = level[i];
-    for (let j = 0; j < row.length; j++) {
-      let x = 16*j - 8;
-      let y = 16*i + 8;
-      if (functionForKey.hasOwnProperty(row[j])) {
-        functionForKey[row[j]](x, y);
-      }
-      else if (row[j] != 'n') {
-        //let msg = `Unknown map element "${row[j]}" at row ${i+1}, col ${j+1}.`
-        //console.log(msg);
+  window.ValidItemSpawnAreas = [];
+
+  for (let row of map.layers[0].data) {  // Basically finds if a tile is grass.
+    for (let tile of row) {
+      if (tile.index == 2) {
+        ValidItemSpawnAreas.push([tile.x * 16 - 8, (tile.y-1) * 16 + 8]);
       }
     }
   }
 
-////
-
-  for (let area of ValidItemSpawnAreas) {
+  for (let area of ValidItemSpawnAreas) {  // Generates random grass.
     let ranSprite = pickRandomSprite(['grass1', 'grass2']);
     grass.create(area[0], area[1], ranSprite);
   }
+
+  for (let i of map.objects[0].objects) {  // Creates the map entities/objects.
+    if (window.hasOwnProperty(i.properties[0].value)) {
+      window[i.properties[0].value](i.x-16, i.y-8);
+    }
+    else {
+      console.log(`Unknown level function ${i.properties[0].value}.`);
+    }
+    //eval(`${i.properties[0].value}(${i.x-16}, ${i.y-8})`);
+  }
+
+  //
 
   // ^ Level Creation stuff ^
 
@@ -102,9 +108,8 @@ function create() {
   // Zombie spawner:
   
   let timerArgs = {delay: 3000, callback: CreateRandomZombie, repeat: -1};
-  if (spawnEnemies) {
-    zombieTimer = this.time.addEvent(timerArgs);
-  }
+  zombieTimer = this.time.addEvent(timerArgs);
+  
 
   // Pickupables:
 
@@ -171,6 +176,8 @@ function create() {
 
 function update() {
   parentThis = this;
+
+
   if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
     console.log('pausing...');
     paused = true;
@@ -183,7 +190,16 @@ function update() {
 
   player.update();
 
-  parentThis.graphics.clear();
+  parentThis.graphics.clear(); // Clears the last graphics drawn.
+
+  // Monster stuff:
+
+  if (!spawnEnemies && zombieTimer.paused == false) {
+    zombieTimer.paused = true;
+  }
+  else if (spawnEnemies && zombieTimer.paused == true) {
+    zombieTimer.paused = false;
+  }
 
   zombies.forEach((zombie) => {
     if (zombie.destroyed && !zombiesFilter) {
@@ -199,11 +215,12 @@ function update() {
     }
   });
 
-
   if (zombiesFilter) {
     // Cleanup for dead zombies in the zombies array.
     zombies = zombies.filter(x => x.destroyed == false);
     zombiesFilter = false;
   }
+
+  //
 
 }

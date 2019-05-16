@@ -1,3 +1,5 @@
+// This code is mostly obsolete. Rewrite it to work with maps made in Tiled!!!
+
 function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder.
   let fs = require('fs');
@@ -34,6 +36,7 @@ let functionForKey = {
   z: createZombieSpawn, e: createEdgeNode
 };
 
+
 function getValidItemSpawnAreas(level) {
   let res = [];
   for (let row = 2; row < level.length; row++) {
@@ -50,4 +53,4 @@ function getValidItemSpawnAreas(level) {
   return res;
 }
 
-let ValidItemSpawnAreas = getValidItemSpawnAreas(level);
+//let ValidItemSpawnAreas = getValidItemSpawnAreas(level);

@@ -24,9 +24,11 @@ class Zombie extends Actor {
     this.chasing = false;
     this.seesTarget = false;
     this.wandering = true;
-    this.lineOfSight = new Phaser.Geom.Line(this.x, this.y, (this.flipX) ? 0 : config.width, this.y);
+    let losArgs = [this.x, this.y, (this.flipX) ? 0 : config.width, this.y];
+    this.lineOfSight = new Phaser.Geom.Line(...losArgs);
 
-    // Zombie AI stuff:
+    // -- Zombie AI stuff -- //
+
     this.lastx = this.x;
     this.updateLastX = () => {
       this.lastx = this.x;
@@ -46,7 +48,7 @@ class Zombie extends Actor {
     this.wander = () => {
       // When the zombie isn't pursuing the player.
       this.wandering = true;
-      let movementVector = (wanderDirection) ? -this.speed : this.speed;
+      let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
       //let validMovementRange = this.x > this.width;
       if (this.wanderTimer.elapsed < 1700) {
         if (this.x <= this.width/2 - 2) {
@@ -55,7 +57,7 @@ class Zombie extends Actor {
         else if (this.x >= config.width - this.width/2 + 2) {
           wanderDirection = true;
         }
-        this.go(movementVector);
+        this.go(movementSpeed);
       }
       else {
         this.goIdle();
@@ -70,10 +72,12 @@ class Zombie extends Actor {
     
     this.move = (target) => {  // Zombie movement AI.
       if (this.alive) {
-        this.lineOfSight.setTo(this.x, this.y, (this.flipX) ? 0 : config.width, this.y);
+        let flipTernary = (this.flipX) ? 0 : config.width;
+        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
         for (let tile of map.getTilesWithinShape(this.lineOfSight)) {
           if (tile.collides) {
-            this.lineOfSight.setTo(this.x, this.y, (!this.flipX) ? tile.pixelX - 16 : tile.pixelX, this.y);
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
             break;
           }
         }
@@ -130,6 +134,8 @@ class Zombie extends Actor {
         //}
       }
     }
+
+    // -- End zombie AI -- //
 
     parentThis.physics.add.collider(this, platforms);
     if (player.alive) {
