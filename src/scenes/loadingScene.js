@@ -25,6 +25,7 @@ function loadingPreload() {  // Loads game assets.
   progressBox.fillRect(centerX-50, centerY-10, 100, 20);
 
   this.load.on('progress', (value) => {
+    // Increases the loading bar size as more assets are loaded.
     progressBar.clear();
     progressBar.fillStyle(0xffffff, 1);
     progressBar.fillRect(centerX-50, centerY-10, 100*value, 20);
@@ -89,6 +90,8 @@ function loadingUpdate() {
   parentThis = this;
 
   if (loadingComplete) {
+    // When the asset loading is complete, fade the loading bar out and
+    // launch the title OR launch the main scene if skipTitle is true.
     let colors = [0xb2dcef, 0x31a2f2, 0x005784, 0x1b2632, 0x000000];
     for (let i = 0; i < colors.length; i++) {
       let timeoutArg = () => {

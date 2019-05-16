@@ -38,10 +38,13 @@ let zombieUsedIDs = [];
 let zombiesAlive = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
+
+// Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
 let skipTitle = true;
+let showVisionRays = true;
 
 // Global variables:
 

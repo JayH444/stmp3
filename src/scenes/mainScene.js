@@ -98,6 +98,8 @@ function create() {
     a: Phaser.Input.Keyboard.KeyCodes.CTRL,
     p: Phaser.Input.Keyboard.KeyCodes.P
   });
+
+  // Zombie spawner:
   
   let timerArgs = {delay: 3000, callback: CreateRandomZombie, repeat: -1};
   if (spawnEnemies) {
@@ -161,6 +163,9 @@ function create() {
     parentThis.physics.add.collider(p, platforms);
     this.physics.add.overlap(player, p, p.pickup, null, parentThis);
   }
+
+  let defaultLineStyle = {lineStyle: {width: 1, color: 0xFF0000}};
+  parentThis.graphics = parentThis.add.graphics(defaultLineStyle);
 }
 
 
@@ -178,6 +183,8 @@ function update() {
 
   player.update();
 
+  parentThis.graphics.clear();
+
   zombies.forEach((zombie) => {
     if (zombie.destroyed && !zombiesFilter) {
       zombiesFilter = true;
@@ -187,7 +194,11 @@ function update() {
     } else {
       zombie.move(player);
     }
+    if (zombie.alive && showVisionRays) {
+      parentThis.graphics.strokeLineShape(zombie.lineOfSight);
+    }
   });
+
 
   if (zombiesFilter) {
     // Cleanup for dead zombies in the zombies array.

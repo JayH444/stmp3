@@ -60,6 +60,7 @@ function loadingPreload() {  // Loads game assets.
   progressBox.fillRect(centerX-50, centerY-10, 100, 20);
 
   this.load.on('progress', (value) => {
+    // Increases the loading bar size as more assets are loaded.
     progressBar.clear();
     progressBar.fillStyle(0xffffff, 1);
     progressBar.fillRect(centerX-50, centerY-10, 100*value, 20);
@@ -124,6 +125,8 @@ function loadingUpdate() {
   parentThis = this;
 
   if (loadingComplete) {
+    // When the asset loading is complete, fade the loading bar out and
+    // launch the title OR launch the main scene if skipTitle is true.
     let colors = [0xb2dcef, 0x31a2f2, 0x005784, 0x1b2632, 0x000000];
     for (let i = 0; i < colors.length; i++) {
       let timeoutArg = () => {
@@ -132,7 +135,12 @@ function loadingUpdate() {
       setTimeout(timeoutArg, 50*(i+1));
     }
     let launchTitle = () => {
-      parentThis.scene.launch('titleScene');
+      if (!skipTitle) {
+        parentThis.scene.launch('titleScene');
+      }
+      else {
+        parentThis.scene.launch('mainScene');
+      }
       parentThis.scene.stop('loadingScene');
     }
     setTimeout(launchTitle, 500);
@@ -308,6 +316,9 @@ function create() {
     parentThis.physics.add.collider(p, platforms);
     this.physics.add.overlap(player, p, p.pickup, null, parentThis);
   }
+
+  let defaultLineStyle = {lineStyle: {width: 1, color: 0xFF0000}};
+  parentThis.graphics = parentThis.add.graphics(defaultLineStyle);
 }
 
 
@@ -325,6 +336,8 @@ function update() {
 
   player.update();
 
+  parentThis.graphics.clear();
+
   zombies.forEach((zombie) => {
     if (zombie.destroyed && !zombiesFilter) {
       zombiesFilter = true;
@@ -334,7 +347,11 @@ function update() {
     } else {
       zombie.move(player);
     }
+    if (zombie.alive && showVisionRays) {
+      parentThis.graphics.strokeLineShape(zombie.lineOfSight);
+    }
   });
+
 
   if (zombiesFilter) {
     // Cleanup for dead zombies in the zombies array.
@@ -1032,6 +1049,7 @@ class Zombie extends Actor {
     this.chasing = false;
     this.seesTarget = false;
     this.wandering = true;
+    this.lineOfSight = new Phaser.Geom.Line(this.x, this.y, (this.flipX) ? 0 : config.width, this.y);
 
     // Zombie AI stuff:
     this.lastx = this.x;
@@ -1076,28 +1094,47 @@ class Zombie extends Actor {
     }
     
     this.move = (target) => {  // Zombie movement AI.
+      if (this.alive) {
+        this.lineOfSight.setTo(this.x, this.y, (this.flipX) ? 0 : config.width, this.y);
+        for (let tile of map.getTilesWithinShape(this.lineOfSight)) {
+          if (tile.collides) {
+            this.lineOfSight.setTo(this.x, this.y, (!this.flipX) ? tile.pixelX - 16 : tile.pixelX, this.y);
+            break;
+          }
+        }
+      }
+      else {
+        delete this.lineOfSight;
+      }
       if (this.alive && !this.stunned) {
         if (noAI === false) { // Ignored if noAI is true.
           // Stuff for when the zombies sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
-            Math.abs(this.y - target.y) <= 30 &&
+            this.lineOfSight.x2 >= target.x &&
+            Math.abs(this.y - target.y) <= 16 &&
             target.alive
           );
           this.seesPlayerLeft = (
             (this.x > target.x && this.flipX) &&
-            Math.abs(this.y - target.y) <= 30 &&
+            this.lineOfSight.x2 <= target.x &&
+            Math.abs(this.y - target.y) <= 16 &&
             target.alive
           );
           // Movement conditionals, ignored if noTarget is enabled:
           if (this.seesPlayerLeft && !noTarget) {
             this.go(-this.speed);
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else if (this.seesPlayerRight && !noTarget) {
             this.go(this.speed);
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else {
             this.wander();
+            parentThis.graphics.lineStyle(1, 0xFF0000, 1);
           }
           let touchingWall = this.body.blocked.left || this.body.blocked.right;
           if (touchingWall && this.x === this.lastx) {
@@ -1262,9 +1299,13 @@ let zombieUsedIDs = [];
 let zombiesAlive = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
+
+// Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
+let skipTitle = true;
+let showVisionRays = true;
 
 // Global variables:
 
