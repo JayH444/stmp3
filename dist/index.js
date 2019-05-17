@@ -165,17 +165,14 @@ class mainScene extends Phaser.Scene {
 }
 
 function preload() {
+  parentThis = this;
 
-  this.load.tilemapTiledJSON(
-    'theMap',
-    'levelTest/test.json'
-  );
-
+  window.levels = loadLevelTilesheets();
 }
 
 function create() {
-
   parentThis = this;
+
   this.bg = this.add.tileSprite(0, 0, 800, 600, 'sky');
 
   // Level creation stuff:
@@ -184,7 +181,7 @@ function create() {
   window.edgeNodes = this.physics.add.staticGroup();
   window.grass = this.physics.add.staticGroup();
 
-  window.map = this.make.tilemap({key: 'theMap'});
+  window.map = this.make.tilemap({key: randomLevel()});
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
   console.log(map);
@@ -192,17 +189,10 @@ function create() {
 
   // Entity creation code:
 
-  window.ValidItemSpawnAreas = [];
+  window.validItemSpawnAreas = getValidItemSpawnAreas();
+  window.validGrassSpawnAreas = getValidGrassSpawnAreas();
 
-  for (let row of map.layers[0].data) {  // Basically finds if a tile is grass.
-    for (let tile of row) {
-      if (tile.index == 2) {
-        ValidItemSpawnAreas.push([tile.x * 16 - 8, (tile.y-1) * 16 + 8]);
-      }
-    }
-  }
-
-  for (let area of ValidItemSpawnAreas) {  // Generates random grass.
+  for (let area of validGrassSpawnAreas) {  // Generates random grass.
     let ranSprite = pickRandomSprite(['grass1', 'grass2']);
     grass.create(area[0], area[1], ranSprite);
   }
@@ -214,12 +204,9 @@ function create() {
     else {
       console.log(`Unknown level function ${i.properties[0].value}.`);
     }
-    //eval(`${i.properties[0].value}(${i.x-16}, ${i.y-8})`);
   }
 
   //
-
-  // ^ Level Creation stuff ^
 
   let playerArgs = [parentThis, centerX, config.height-32, 'player', 160];
   window.player = new Player(...playerArgs);
@@ -666,7 +653,7 @@ class gameTimer {
 
 // This code is mostly obsolete. Rewrite it to work with maps made in Tiled!!!
 
-function loadLevelTilesheets() {
+/*function loadLevelTilesheets() {  // Also obsolete, but can be retooled to load .json files...
   // Loads the level tilesheets of the game in the "levels" folder.
   let fs = require('fs');
   let fileNames = fs.readdirSync('../dev/root/dist/levels');
@@ -679,16 +666,37 @@ function loadLevelTilesheets() {
     res.push(level);
   }
   return res;
+}*/
+
+
+function loadLevelTilesheets() {
+  // Loads the level tilesheets of the game in the "levels" folder, and
+  // returns an array of the keys for the levels.
+  let fs = require('fs');
+  let files = fs.readdirSync('../dev/root/dist/levels');
+  let res = [];
+  for (let file of files) {
+    // fileKey is basically the file name:
+    let fileKey = file.match(/(\w+)\.json/)[1];
+    parentThis.load.tilemapTiledJSON(
+      fileKey,
+      `levels/${file}`
+    );
+    console.log(fileKey);
+    console.log(`levels/${file}`);
+    res.push(fileKey);
+  }
+  return res;
 }
 
-let gameLevels = loadLevelTilesheets();
+function randomLevel() {
+  return levels[Math.floor(Math.random()*levels.length)];
+}
 
-// Level loading code:
-let level = gameLevels[Math.floor(Math.random()*gameLevels.length)];
+//let gameLevels = loadLevelTilesheets();
 
-let spriteForKey = {
-  g: 'groundgrass', r: 'ground', s: 'scoreboard',
-};
+// (OBSOLETE) Level loading code:
+// let level = gameLevels[Math.floor(Math.random()*gameLevels.length)];
 
 function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
@@ -698,28 +706,35 @@ function createZombieSpawn(x, y) {
   zombieSpawnpoints.push([x, y])
 }
 
-let functionForKey = {
-  z: createZombieSpawn, e: createEdgeNode
-};
-
-
-function getValidItemSpawnAreas(level) {
+function getValidItemSpawnAreas() {
   let res = [];
-  for (let row = 2; row < level.length; row++) {
-    for (let col = 1; col < level[row].length - 1; col++) {
-      let conditions = (
-        spriteForKey.hasOwnProperty(level[row][col]) &&
-        level[row-1][col] == 'n'
-      );
-      if (conditions) {
-        res.push([col * 16 - 8, (row-1) * 16 + 8]);
+  for (let row of map.layers[0].data.slice(1,)) {
+    for (let i in row) {
+      let tile = row[i]
+      let tileAboveIsEmpty = map.layers[0].data[tile.y-1][i].index == -1;
+      let tileOnScreen = tile.x > 0 && tile.x < 21;
+      if ([1, 2].includes(tile.index) && tileAboveIsEmpty && tileOnScreen) {
+        // 1 and 2 are the ground and ground w/ grass tiles.
+        res.push([tile.x*16 - 8, (tile.y-1)*16 + 8]);
       }
     }
   }
   return res;
 }
 
-//let ValidItemSpawnAreas = getValidItemSpawnAreas(level);
+function getValidGrassSpawnAreas() {
+  let res = [];
+  for (let row of map.layers[0].data) {
+    for (let tile of row) {
+      let tileOnScreen = tile.x > 0 && tile.x < 21;
+      if (tile.index === 2 && tileOnScreen) {
+        res.push([tile.x*16 - 8, (tile.y-1)*16 + 8]);
+      }
+    }
+  }
+  return res;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1119,15 +1134,29 @@ class Zombie extends Actor {
     
     this.move = (target) => {  // Zombie movement AI.
       if (this.alive) {
+        // This controls the zombie's LoS raycast.
         let flipTernary = (this.flipX) ? 0 : config.width;
         this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-        for (let tile of map.getTilesWithinShape(this.lineOfSight)) {
+        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
+        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
+        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
+          // If the zombie is facing left, then the tiles within the line 
+          // should be iterated right-to-left instead of left-to-right.
+          let tile = tilesWithinShape[i];
           if (tile.collides) {
             flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
             this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
             break;
           }
+          (this.flipX) ? i-- : i++;
         }
+        /*for (let tile of tilesWithinShape) {
+          if (tile.collides) {
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+            break;
+          }
+        }*/
       }
       else {
         delete this.lineOfSight;
@@ -1268,11 +1297,11 @@ function mixinPickupableMethods(p, sprite, destructTime) {
   
   p.spawnRandom = () => {
     // Selects a random position from the valid spawn areas:
-    let position = pickRandomSprite(ValidItemSpawnAreas);
+    let position = pickRandomSprite(validItemSpawnAreas);
     let distArgs = [position[0], position[1], player.x, player.y];
     // Prevents items from spawning on the player:
     while (calculateDistance(...distArgs) < 32) {
-      position = pickRandomSprite(ValidItemSpawnAreas);
+      position = pickRandomSprite(validItemSpawnAreas);
       distArgs = [position[0], position[1], player.x, player.y];
     }
     p.spawn(...position);

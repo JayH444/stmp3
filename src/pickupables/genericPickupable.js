@@ -23,11 +23,11 @@ function mixinPickupableMethods(p, sprite, destructTime) {
   
   p.spawnRandom = () => {
     // Selects a random position from the valid spawn areas:
-    let position = pickRandomSprite(ValidItemSpawnAreas);
+    let position = pickRandomSprite(validItemSpawnAreas);
     let distArgs = [position[0], position[1], player.x, player.y];
     // Prevents items from spawning on the player:
     while (calculateDistance(...distArgs) < 32) {
-      position = pickRandomSprite(ValidItemSpawnAreas);
+      position = pickRandomSprite(validItemSpawnAreas);
       distArgs = [position[0], position[1], player.x, player.y];
     }
     p.spawn(...position);

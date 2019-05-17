@@ -1,6 +1,6 @@
 // This code is mostly obsolete. Rewrite it to work with maps made in Tiled!!!
 
-function loadLevelTilesheets() {
+/*function loadLevelTilesheets() {  // Also obsolete, but can be retooled to load .json files...
   // Loads the level tilesheets of the game in the "levels" folder.
   let fs = require('fs');
   let fileNames = fs.readdirSync('../dev/root/dist/levels');
@@ -13,16 +13,37 @@ function loadLevelTilesheets() {
     res.push(level);
   }
   return res;
+}*/
+
+
+function loadLevelTilesheets() {
+  // Loads the level tilesheets of the game in the "levels" folder, and
+  // returns an array of the keys for the levels.
+  let fs = require('fs');
+  let files = fs.readdirSync('../dev/root/dist/levels');
+  let res = [];
+  for (let file of files) {
+    // fileKey is basically the file name:
+    let fileKey = file.match(/(\w+)\.json/)[1];
+    parentThis.load.tilemapTiledJSON(
+      fileKey,
+      `levels/${file}`
+    );
+    console.log(fileKey);
+    console.log(`levels/${file}`);
+    res.push(fileKey);
+  }
+  return res;
 }
 
-let gameLevels = loadLevelTilesheets();
+function randomLevel() {
+  return levels[Math.floor(Math.random()*levels.length)];
+}
 
-// Level loading code:
-let level = gameLevels[Math.floor(Math.random()*gameLevels.length)];
+//let gameLevels = loadLevelTilesheets();
 
-let spriteForKey = {
-  g: 'groundgrass', r: 'ground', s: 'scoreboard',
-};
+// (OBSOLETE) Level loading code:
+// let level = gameLevels[Math.floor(Math.random()*gameLevels.length)];
 
 function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
@@ -32,25 +53,31 @@ function createZombieSpawn(x, y) {
   zombieSpawnpoints.push([x, y])
 }
 
-let functionForKey = {
-  z: createZombieSpawn, e: createEdgeNode
-};
-
-
-function getValidItemSpawnAreas(level) {
+function getValidItemSpawnAreas() {
   let res = [];
-  for (let row = 2; row < level.length; row++) {
-    for (let col = 1; col < level[row].length - 1; col++) {
-      let conditions = (
-        spriteForKey.hasOwnProperty(level[row][col]) &&
-        level[row-1][col] == 'n'
-      );
-      if (conditions) {
-        res.push([col * 16 - 8, (row-1) * 16 + 8]);
+  for (let row of map.layers[0].data.slice(1,)) {
+    for (let i in row) {
+      let tile = row[i]
+      let tileAboveIsEmpty = map.layers[0].data[tile.y-1][i].index == -1;
+      let tileOnScreen = tile.x > 0 && tile.x < 21;
+      if ([1, 2].includes(tile.index) && tileAboveIsEmpty && tileOnScreen) {
+        // 1 and 2 are the ground and ground w/ grass tiles.
+        res.push([tile.x*16 - 8, (tile.y-1)*16 + 8]);
       }
     }
   }
   return res;
 }
 
-//let ValidItemSpawnAreas = getValidItemSpawnAreas(level);
+function getValidGrassSpawnAreas() {
+  let res = [];
+  for (let row of map.layers[0].data) {
+    for (let tile of row) {
+      let tileOnScreen = tile.x > 0 && tile.x < 21;
+      if (tile.index === 2 && tileOnScreen) {
+        res.push([tile.x*16 - 8, (tile.y-1)*16 + 8]);
+      }
+    }
+  }
+  return res;
+}

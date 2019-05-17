@@ -10,17 +10,14 @@ class mainScene extends Phaser.Scene {
 }
 
 function preload() {
+  parentThis = this;
 
-  this.load.tilemapTiledJSON(
-    'theMap',
-    'levelTest/test.json'
-  );
-
+  window.levels = loadLevelTilesheets();
 }
 
 function create() {
-
   parentThis = this;
+
   this.bg = this.add.tileSprite(0, 0, 800, 600, 'sky');
 
   // Level creation stuff:
@@ -29,7 +26,7 @@ function create() {
   window.edgeNodes = this.physics.add.staticGroup();
   window.grass = this.physics.add.staticGroup();
 
-  window.map = this.make.tilemap({key: 'theMap'});
+  window.map = this.make.tilemap({key: randomLevel()});
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
   console.log(map);
@@ -37,17 +34,10 @@ function create() {
 
   // Entity creation code:
 
-  window.ValidItemSpawnAreas = [];
+  window.validItemSpawnAreas = getValidItemSpawnAreas();
+  window.validGrassSpawnAreas = getValidGrassSpawnAreas();
 
-  for (let row of map.layers[0].data) {  // Basically finds if a tile is grass.
-    for (let tile of row) {
-      if (tile.index == 2) {
-        ValidItemSpawnAreas.push([tile.x * 16 - 8, (tile.y-1) * 16 + 8]);
-      }
-    }
-  }
-
-  for (let area of ValidItemSpawnAreas) {  // Generates random grass.
+  for (let area of validGrassSpawnAreas) {  // Generates random grass.
     let ranSprite = pickRandomSprite(['grass1', 'grass2']);
     grass.create(area[0], area[1], ranSprite);
   }
@@ -59,12 +49,9 @@ function create() {
     else {
       console.log(`Unknown level function ${i.properties[0].value}.`);
     }
-    //eval(`${i.properties[0].value}(${i.x-16}, ${i.y-8})`);
   }
 
   //
-
-  // ^ Level Creation stuff ^
 
   let playerArgs = [parentThis, centerX, config.height-32, 'player', 160];
   window.player = new Player(...playerArgs);

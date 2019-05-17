@@ -72,15 +72,29 @@ class Zombie extends Actor {
     
     this.move = (target) => {  // Zombie movement AI.
       if (this.alive) {
+        // This controls the zombie's LoS raycast.
         let flipTernary = (this.flipX) ? 0 : config.width;
         this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-        for (let tile of map.getTilesWithinShape(this.lineOfSight)) {
+        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
+        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
+        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
+          // If the zombie is facing left, then the tiles within the line 
+          // should be iterated right-to-left instead of left-to-right.
+          let tile = tilesWithinShape[i];
           if (tile.collides) {
             flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
             this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
             break;
           }
+          (this.flipX) ? i-- : i++;
         }
+        /*for (let tile of tilesWithinShape) {
+          if (tile.collides) {
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+            break;
+          }
+        }*/
       }
       else {
         delete this.lineOfSight;
