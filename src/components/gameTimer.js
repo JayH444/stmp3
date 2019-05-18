@@ -4,6 +4,7 @@ class gameTimer {
   // enemies alive, which is used for the timer's win/lose state.
   constructor(enemyManager) {
     this.timeRemaining = 90;
+    this.timerEvent;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
@@ -12,15 +13,24 @@ class gameTimer {
     };
     this.tickTimer = () => {
       this.timeRemaining--;
-      if (this.timeRemaining === -1) {
-        /*if (enemyManager.enemyCount > 0) {
+      if (this.timeRemaining === 0) {
+        if (enemyManager.enemyCount > 0) {
           player.die();
           for (let z of zombies) {
             z.die();
           }
           zombiesAlive = 0;
-        }*/
-        this.resetTime();
+          spawnEnemies = false;
+          this.timerEvent.paused = true;
+          totalScore = player.getScore();
+          setTimeout(() => {
+            parentThis.scene.launch('gameOverScene');
+            parentThis.scene.stop('mainScene');
+          }, 1000);
+        }
+        else {
+          this.resetTime();
+        }
       }
       updateText('timeRemaining', this.getTimeRemaining);
     };
@@ -28,7 +38,7 @@ class gameTimer {
       let gameTimerEventArgs = {
         delay: 1000, callback: this.tickTimer, repeat: -1
       };
-      parentThis.time.addEvent(gameTimerEventArgs);
+      this.timerEvent = parentThis.time.addEvent(gameTimerEventArgs);
     };
   }
 }

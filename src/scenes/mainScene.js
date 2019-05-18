@@ -103,13 +103,13 @@ function create() {
   coins = this.physics.add.group();
   coins.setDepth(0, 0);
 
-  mixinPickupableMethods(coins, 'coin', 5000)
+  mixinPickupableMethods(coins, 'coin', 5000);
 
   let csArgs = {delay: 15000, callback: coins.spawnRandom, repeat: -1};
   let coinSpawner = this.time.addEvent(csArgs);
 
 
-// Food spawning:
+  // Food spawning:
   food = this.physics.add.group();
   food.setDepth(0, 0);
 
@@ -132,6 +132,17 @@ function create() {
     parentThis.time.delayedCall(10000, destroy);
   }
 
+  function pickupableTimer () {
+    food.spawnRandom();
+    let resetArgs = {
+      delay: Phaser.Math.Between(15000, 30000),
+      callback: pickupableTimer,
+      callbackScope: this,
+      repeat: 1
+    };
+    foodSpawner.reset(resetArgs);
+  };
+
   let fsArgs = {
     delay: 3000,
     callback: pickupableTimer,
@@ -139,17 +150,6 @@ function create() {
   };
 
   let foodSpawner = this.time.addEvent(fsArgs);
-
-  function pickupableTimer () {
-      food.spawnRandom();
-      let resetArgs = {
-        delay: Phaser.Math.Between(15000, 30000),
-        callback: pickupableTimer,
-        callbackScope: this,
-        repeat: 1
-      };
-      foodSpawner.reset(resetArgs);
-  };
   
   for (let p of pickupables) {
     parentThis.physics.add.collider(p, platforms);

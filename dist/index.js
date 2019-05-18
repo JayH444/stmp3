@@ -1,3 +1,60 @@
+//- src\scenes\gameOverScene.js -//////////////////////////////////////////////
+
+// Game over scene.
+
+class gameOverScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'gameOverScene'});
+    this.preload = gameOverPreload;
+    this.create = gameOverCreate;
+    this.update = gameOverUpdate;
+  }
+}
+
+function gameOverPreload() {
+  parentThis = this;
+}
+
+function gameOverCreate() {
+  parentThis = this;
+  centerX = config.width/2;
+  centerY = config.height/2;
+  coins;
+  food;
+  cursors;
+  cursorsPaused;
+  paused = false;
+  parentThis;
+  randBool = true;
+  for (let key in textObjects) {
+    destroyText(key);
+  }
+  textObjects = {};
+
+  zombiesFilter = false;
+  zombies = [];
+  zombieUsedIDs = [];
+  zombiesAlive = 0;
+  //zombieTimer;
+  zombieSpawnpoints = [];
+  pickupables = [];
+
+  spawnEnemies = true;
+  printTextCenter('Game Over', 'gameOverText', centerY-8);
+  printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
+  setTimeout(() => {
+    parentThis.scene.launch('titleScene');
+    parentThis.scene.stop('gameOverScene');    
+  }, 3000);
+}
+
+function gameOverUpdate() {
+  parentThis = this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\scenes\levelIntroScene.js -////////////////////////////////////////////
 
 // Level intro scene.
@@ -258,13 +315,13 @@ function create() {
   coins = this.physics.add.group();
   coins.setDepth(0, 0);
 
-  mixinPickupableMethods(coins, 'coin', 5000)
+  mixinPickupableMethods(coins, 'coin', 5000);
 
   let csArgs = {delay: 15000, callback: coins.spawnRandom, repeat: -1};
   let coinSpawner = this.time.addEvent(csArgs);
 
 
-// Food spawning:
+  // Food spawning:
   food = this.physics.add.group();
   food.setDepth(0, 0);
 
@@ -287,6 +344,17 @@ function create() {
     parentThis.time.delayedCall(10000, destroy);
   }
 
+  function pickupableTimer () {
+    food.spawnRandom();
+    let resetArgs = {
+      delay: Phaser.Math.Between(15000, 30000),
+      callback: pickupableTimer,
+      callbackScope: this,
+      repeat: 1
+    };
+    foodSpawner.reset(resetArgs);
+  };
+
   let fsArgs = {
     delay: 3000,
     callback: pickupableTimer,
@@ -294,17 +362,6 @@ function create() {
   };
 
   let foodSpawner = this.time.addEvent(fsArgs);
-
-  function pickupableTimer () {
-      food.spawnRandom();
-      let resetArgs = {
-        delay: Phaser.Math.Between(15000, 30000),
-        callback: pickupableTimer,
-        callbackScope: this,
-        repeat: 1
-      };
-      foodSpawner.reset(resetArgs);
-  };
   
   for (let p of pickupables) {
     parentThis.physics.add.collider(p, platforms);
@@ -591,7 +648,7 @@ function destroyText(textId) {
 
 class EnemyManagerClass {
   constructor() {
-    this.enemyCount = Math.floor(Math.random()*12 + 12);
+    this.enemyCount = Math.floor(Math.random()*6 + 6);
     this.decrement = this.decrement.bind(this);
     this.getEnemyCountText = this.getEnemyCountText.bind(this);
   }
@@ -616,24 +673,34 @@ class gameTimer {
   // enemyManager is passed in as the argument to keep track of the number of
   // enemies alive, which is used for the timer's win/lose state.
   constructor(enemyManager) {
-    this.timeRemaining = 90;
+    this.timeRemaining = 30;
+    this.timerEvent;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
     this.resetTime = () => {
-      this.timeRemaining = 90;
+      this.timeRemaining = 30;
     };
     this.tickTimer = () => {
       this.timeRemaining--;
-      if (this.timeRemaining === -1) {
-        /*if (enemyManager.enemyCount > 0) {
+      if (this.timeRemaining === 0) {
+        if (enemyManager.enemyCount > 0) {
           player.die();
           for (let z of zombies) {
             z.die();
           }
           zombiesAlive = 0;
-        }*/
-        this.resetTime();
+          spawnEnemies = false;
+          this.timerEvent.paused = true;
+          totalScore = player.getScore();
+          setTimeout(() => {
+            parentThis.scene.launch('gameOverScene');
+            parentThis.scene.stop('mainScene');
+          }, 1000);
+        }
+        else {
+          this.resetTime();
+        }
       }
       updateText('timeRemaining', this.getTimeRemaining);
     };
@@ -641,7 +708,7 @@ class gameTimer {
       let gameTimerEventArgs = {
         delay: 1000, callback: this.tickTimer, repeat: -1
       };
-      parentThis.time.addEvent(gameTimerEventArgs);
+      this.timerEvent = parentThis.time.addEvent(gameTimerEventArgs);
     };
   }
 }
@@ -1328,7 +1395,10 @@ let config = {
       debug: false
     }
   },
-  scene: [loadingScene, titleScene, levelIntroScene, mainScene, pausedScene]
+  scene: [
+    loadingScene, titleScene, levelIntroScene,
+    mainScene, pausedScene, gameOverScene
+  ]
 };
 
 // Global variables:
@@ -1356,13 +1426,14 @@ let zombieUsedIDs = [];
 let zombiesAlive = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
+let totalScore = 0;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
-let skipTitle = true;
-let showVisionRays = true;
+let skipTitle = false;
+let showVisionRays = false;
 
 // Global variables:
 

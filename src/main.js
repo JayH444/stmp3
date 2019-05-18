@@ -10,7 +10,10 @@ let config = {
       debug: false
     }
   },
-  scene: [loadingScene, titleScene, levelIntroScene, mainScene, pausedScene]
+  scene: [
+    loadingScene, titleScene, levelIntroScene,
+    mainScene, pausedScene, gameOverScene
+  ]
 };
 
 // Global variables:
@@ -38,13 +41,14 @@ let zombieUsedIDs = [];
 let zombiesAlive = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
+let totalScore = 0;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
-let skipTitle = true;
-let showVisionRays = true;
+let skipTitle = false;
+let showVisionRays = false;
 
 // Global variables:
 
