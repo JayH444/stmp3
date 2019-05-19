@@ -74,9 +74,8 @@ function loadingPreload() {  // Loads game assets.
     this.load.audio(file.match(pattern)[1], 'sfx/' + file);
   }
 
-  /*for (let i = 0; i < 500; i++) {
-    this.load.image('gameLogo' + i, 'assets/game_logo.png');
-  }*/
+  // Level JSON loading:
+  window.levels = loadLevelTilesheets();
 
   this.load.image('menuCursor', 'assets/menu_cursor.png');
   this.load.image('gameLogo', 'assets/game_logo.png');
@@ -97,7 +96,7 @@ function loadingUpdate() {
       let timeoutArg = () => {
         setRect(progressBar, [colors[i], 1], [centerX-50, centerY-10, 100, 20])
       }; 
-      setTimeout(timeoutArg, 50*(i+1));
+      setTimeout(timeoutArg, 33*(i+1));
     }
     let launchTitle = () => {
       if (!skipTitle) {
@@ -108,7 +107,7 @@ function loadingUpdate() {
       }
       parentThis.scene.stop('loadingScene');
     }
-    setTimeout(launchTitle, 500);
+    setTimeout(launchTitle, 300);
     loadingComplete = false;
   };
 }

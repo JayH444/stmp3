@@ -16,30 +16,6 @@ function gameOverPreload() {
 }
 
 function gameOverCreate() {
-  parentThis = this;
-  centerX = config.width/2;
-  centerY = config.height/2;
-  coins;
-  food;
-  cursors;
-  cursorsPaused;
-  paused = false;
-  parentThis;
-  randBool = true;
-  for (let key in textObjects) {
-    destroyText(key);
-  }
-  textObjects = {};
-
-  zombiesFilter = false;
-  zombies = [];
-  zombieUsedIDs = [];
-  zombiesAlive = 0;
-  //zombieTimer;
-  zombieSpawnpoints = [];
-  pickupables = [];
-
-  spawnEnemies = true;
   printTextCenter('Game Over', 'gameOverText', centerY-8);
   printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
   setTimeout(() => {
@@ -70,11 +46,13 @@ class levelIntroScene extends Phaser.Scene {
 
 function levelIntroPreload() {
   parentThis = this;
+  currentLevel = (pickRandomLevel) ? randomLevel() : levels[levelNumber];
 }
 
 function levelIntroCreate() {
   parentThis = this;
-  printTextCenter('Level 1', 'levelIntroText');
+  let levelName = (map.properties[0]) ? map.properties[0].value : currentLevel;
+  printTextCenter(levelName, 'levelIntroText');
   setTimeout(() => {
     parentThis.scene.launch('mainScene');
     parentThis.scene.stop('levelIntroScene');    
@@ -166,9 +144,8 @@ function loadingPreload() {  // Loads game assets.
     this.load.audio(file.match(pattern)[1], 'sfx/' + file);
   }
 
-  /*for (let i = 0; i < 500; i++) {
-    this.load.image('gameLogo' + i, 'assets/game_logo.png');
-  }*/
+  // Level JSON loading:
+  window.levels = loadLevelTilesheets();
 
   this.load.image('menuCursor', 'assets/menu_cursor.png');
   this.load.image('gameLogo', 'assets/game_logo.png');
@@ -189,7 +166,7 @@ function loadingUpdate() {
       let timeoutArg = () => {
         setRect(progressBar, [colors[i], 1], [centerX-50, centerY-10, 100, 20])
       }; 
-      setTimeout(timeoutArg, 50*(i+1));
+      setTimeout(timeoutArg, 33*(i+1));
     }
     let launchTitle = () => {
       if (!skipTitle) {
@@ -200,7 +177,7 @@ function loadingUpdate() {
       }
       parentThis.scene.stop('loadingScene');
     }
-    setTimeout(launchTitle, 500);
+    setTimeout(launchTitle, 300);
     loadingComplete = false;
   };
 }
@@ -223,8 +200,9 @@ class mainScene extends Phaser.Scene {
 
 function preload() {
   parentThis = this;
-
-  window.levels = loadLevelTilesheets();
+  if (skipTitle) {
+    currentLevel = (pickRandomLevel) ? randomLevel() : levels[levelNumber];
+  }
 }
 
 function create() {
@@ -238,10 +216,10 @@ function create() {
   window.edgeNodes = this.physics.add.staticGroup();
   window.grass = this.physics.add.staticGroup();
 
-  window.map = this.make.tilemap({key: randomLevel()});
+  window.map = this.make.tilemap({key: currentLevel});
+  console.log(map);
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
-  console.log(map);
   platforms.setCollisionByProperty({collides: true});
 
   // Entity creation code:
@@ -267,6 +245,7 @@ function create() {
 
   let playerArgs = [parentThis, centerX, config.height-32, 'player', 160];
   window.player = new Player(...playerArgs);
+  player.setScore(totalScore);
 
   // Collision detection for player and zombies:
   window.player.colliders = {};
@@ -279,7 +258,7 @@ function create() {
   // Game enemy manager:
   window.gameEnemyManager = new EnemyManagerClass();
   // Game timer:
-  window.theTimer = new gameTimer(gameEnemyManager);
+  window.gameTimer = new gameTimerClass(gameEnemyManager);
 
   // Game topbar text:
   let scoreX = 8;
@@ -290,8 +269,8 @@ function create() {
   printText(gameEnemyManager.getEnemyCountText(), foesX + 40, 8, 'foesLeft');
   let timeX = 212;
   printText('TIME:', timeX, 8, 'timeText');
-  printText(theTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
-  theTimer.startTimer();
+  printText(gameTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
+  gameTimer.startTimer();
 
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
@@ -376,15 +355,22 @@ function create() {
 function update() {
   parentThis = this;
 
-
   if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
-    console.log('pausing...');
     paused = true;
     this.scene.launch('pausedScene');
     this.scene.pause('mainScene');
   } 
   else {
-      this.scene.resume('mainScene');
+    this.scene.resume('mainScene');
+  }
+
+  if (!player.alive) {  // Trigger game over.
+    gameTimer.timerEvent.paused = true;
+    totalScore = player.getScore();
+    setTimeout(() => {
+      parentThis.scene.launch('gameOverScene');
+      parentThis.scene.stop('mainScene');
+    }, 1500);
   }
 
   player.update();
@@ -440,11 +426,25 @@ class pausedScene extends Phaser.Scene {
       printText('PAUSED', centerX-20, centerY, 'pauseText');
       // This creates the keybinds:
       cursorsPaused = this.input.keyboard.addKeys({
+        up: Phaser.Input.Keyboard.KeyCodes.W,
+        down: Phaser.Input.Keyboard.KeyCodes.S,
+        left: Phaser.Input.Keyboard.KeyCodes.A,
+        right: Phaser.Input.Keyboard.KeyCodes.D,
+        b: Phaser.Input.Keyboard.KeyCodes.SPACE,
+        a: Phaser.Input.Keyboard.KeyCodes.CTRL,
         p: Phaser.Input.Keyboard.KeyCodes.P
       });
     }
     this.update = function() {
-      if (Phaser.Input.Keyboard.JustDown(cursorsPaused.p) && paused) {
+      let curP = cursorsPaused;
+      if (curP.a.isDown && curP.b.isDown && curP.down.isDown) {
+        parentThis.scene.launch('titleScene');
+        parentThis.scene.stop('mainScene');
+        parentThis.scene.stop('pausedScene');
+        totalScore = 0;
+        resetGlobalVars()
+      }
+      if (Phaser.Input.Keyboard.JustDown(curP.p) && paused) {
         destroyText('pauseText');
         paused = false;
         cursors.up.isDown = false;
@@ -556,6 +556,23 @@ function titleUpdate() {
 ///////////////////////////////////////////////////////////////////////////////
 
 
+//- src\functions\levelFunctions.js -//////////////////////////////////////////
+
+function completeLevel(advance=true) {
+  if (!textObjects.hasOwnProperty('levelClearedText')) {
+    printTextCenter('Level cleared!', 'levelClearedText');
+  }
+  setTimeout(() => {
+    if (levelNumber < levels.length-1 && advance == true) levelNumber++;
+    parentThis.scene.launch('levelIntroScene');
+    parentThis.scene.stop('mainScene');
+    resetGlobalVars()
+  }, 3000);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\functions\mathFunctions.js -///////////////////////////////////////////
 
 // Math-related functions.
@@ -647,17 +664,20 @@ function destroyText(textId) {
 //- src\components\enemyManager.js -///////////////////////////////////////////
 
 class EnemyManagerClass {
-  constructor() {
-    this.enemyCount = Math.floor(Math.random()*6 + 6);
+  constructor(enemyCountMedian=12, enemyCountRange=12) {
+    let ecm = enemyCountMedian;
+    let ecr = enemyCountRange;
+    this.initialEnemyCount = Math.floor(Math.random()*ecr + ecm);
+    this.currentEnemyCount = this.initialEnemyCount;
     this.decrement = this.decrement.bind(this);
     this.getEnemyCountText = this.getEnemyCountText.bind(this);
   }
   getEnemyCountText() {
-    return this.enemyCount.toString().padStart(3, '0');
+    return this.currentEnemyCount.toString().padStart(3, '0');
   }
   decrement() {
-    if (this.enemyCount > 0) {
-      this.enemyCount--;
+    if (this.currentEnemyCount > 0) {
+      this.currentEnemyCount--;
       updateText('foesLeft', this.getEnemyCountText);
     }
   }
@@ -668,23 +688,29 @@ class EnemyManagerClass {
 
 //- src\components\gameTimer.js -//////////////////////////////////////////////
 
-class gameTimer {
+class gameTimerClass {
   // Class for the game timer and its properties and methods.
   // enemyManager is passed in as the argument to keep track of the number of
   // enemies alive, which is used for the timer's win/lose state.
   constructor(enemyManager) {
-    this.timeRemaining = 30;
+    this.timeRemaining = 90;
     this.timerEvent;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
     this.resetTime = () => {
-      this.timeRemaining = 30;
+      this.timeRemaining = 90;
     };
     this.tickTimer = () => {
-      this.timeRemaining--;
+      if (enemyManager.currentEnemyCount > 0) {
+        this.timeRemaining--;
+      }
+      else {
+        this.timerEvent.paused = true;
+        completeLevel()
+      }
       if (this.timeRemaining === 0) {
-        if (enemyManager.enemyCount > 0) {
+        if (enemyManager.currentEnemyCount > 0) {
           player.die();
           for (let z of zombies) {
             z.die();
@@ -696,7 +722,8 @@ class gameTimer {
           setTimeout(() => {
             parentThis.scene.launch('gameOverScene');
             parentThis.scene.stop('mainScene');
-          }, 1000);
+            resetGlobalVars()
+          }, 1500);
         }
         else {
           this.resetTime();
@@ -718,24 +745,6 @@ class gameTimer {
 
 //- src\components\levelLoader.js -////////////////////////////////////////////
 
-// This code is mostly obsolete. Rewrite it to work with maps made in Tiled!!!
-
-/*function loadLevelTilesheets() {  // Also obsolete, but can be retooled to load .json files...
-  // Loads the level tilesheets of the game in the "levels" folder.
-  let fs = require('fs');
-  let fileNames = fs.readdirSync('../dev/root/dist/levels');
-  let res = [];
-  for (let file of fileNames) {
-    if (file == 'readme.txt') continue;
-    let level = fs
-      .readFileSync(`../dev/root/dist/levels/${file}`, 'utf-8')
-      .split(/\r\n|\n/);  // Windows and Linux/Unix compatible!
-    res.push(level);
-  }
-  return res;
-}*/
-
-
 function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder, and
   // returns an array of the keys for the levels.
@@ -749,8 +758,6 @@ function loadLevelTilesheets() {
       fileKey,
       `levels/${file}`
     );
-    console.log(fileKey);
-    console.log(`levels/${file}`);
     res.push(fileKey);
   }
   return res;
@@ -760,17 +767,12 @@ function randomLevel() {
   return levels[Math.floor(Math.random()*levels.length)];
 }
 
-//let gameLevels = loadLevelTilesheets();
-
-// (OBSOLETE) Level loading code:
-// let level = gameLevels[Math.floor(Math.random()*gameLevels.length)];
-
 function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
 }
 
 function createZombieSpawn(x, y) {
-  zombieSpawnpoints.push([x, y])
+  zombieSpawnpoints.push([x, y]);
 }
 
 function getValidItemSpawnAreas() {
@@ -1014,17 +1016,7 @@ class Player extends Actor {
   constructor(scene, x, y, texture, speed, name=texture) {
     super(scene, x, y, texture, speed, name, true);
     this.score = 0;
-    this.getScore = () => this.score.toString().padStart(7, '0');
-    this.addScore = (points) => {
-      this.score += points;
-      updateText('playerScore', this.getScore);
-    };
     this.kills = 0;
-    this.getKills = () => this.kills.toString().padStart(3, '0');
-    this.addKill = () => {
-      this.kills++;
-      gameEnemyManager.decrement();
-    }
     this.holdingJump = false;
     this.holdingPunch = false;
     this.isPunching = false;
@@ -1036,6 +1028,27 @@ class Player extends Actor {
       let pos = config.width - 8 - (i * 12);
       this.hb.unshift(parentThis.add.image(pos, 8, 'heart'));
     }
+
+    // Player methods:
+
+    this.getScore = () => this.score.toString().padStart(7, '0');
+
+    this.setScore = (points) => {
+      this.score = points;
+      updateText('playerScore', this.getScore);
+    };
+
+    this.addScore = (points) => {
+      this.score += points;
+      updateText('playerScore', this.getScore);
+    };
+
+    this.getKills = () => this.kills.toString().padStart(3, '0');
+
+    this.addKill = () => {
+      this.kills++;
+      gameEnemyManager.decrement();
+    };
   
     this.addHealth = () => {
       if (this.health < 3) {
@@ -1045,7 +1058,7 @@ class Player extends Actor {
       else {
         this.addScore(1000);
       }
-    }
+    };
   
     this.punch = () => {
       this.playSoundPunch();
@@ -1058,7 +1071,7 @@ class Player extends Actor {
       let CollisionX = (this.flipX) ? this.x - 10 : this.x + 10;
       let punchbox = punchboxes.create(CollisionX, this.y, 'punchbox');
       parentThis.time.delayedCall(100, () => punchbox.destroy());
-    }
+    };
 
     this.update = () => {
       // Player input and animations conditionals:
@@ -1118,7 +1131,7 @@ class Player extends Actor {
       else {
         this.decayVelocityX(0.55);
       }
-    }
+    };
   }
 }
 
@@ -1291,7 +1304,6 @@ class Zombie extends Actor {
       target1.stun(400);
       target1.setVelocityY(-150);
       let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
-      console.log(velocity);
       target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
       punchObject.destroy();
       parentThis.physics.world.removeCollider(this.collider);
@@ -1326,8 +1338,11 @@ class Zombie extends Actor {
 }
 
 function CreateRandomZombie() {
-  if (zombiesAlive >= 10) return;
+  let condA = zombiesAlive >= 10;
+  let condB = totalZombiesSpawned >= gameEnemyManager.initialEnemyCount;
+  if (condA || condB) return;
   zombiesAlive++;
+  totalZombiesSpawned++;
   let randomSpawn = parseInt(Math.random() * zombieSpawnpoints.length);
   let x = zombieSpawnpoints[randomSpawn][0];
   let y = zombieSpawnpoints[randomSpawn][1];
@@ -1401,7 +1416,7 @@ let config = {
   ]
 };
 
-// Global variables:
+// -- Global variables: -- //
 
 let centerX = config.width/2;
 let centerY = config.height/2;
@@ -1424,18 +1439,22 @@ let zombiesFilter = false;
 let zombies = [];
 let zombieUsedIDs = [];
 let zombiesAlive = 0;
+let totalZombiesSpawned = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
 let totalScore = 0;
+let currentLevel;
+let levelNumber = 0;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
-let skipTitle = false;
+let skipTitle = true;
 let showVisionRays = false;
+let pickRandomLevel = false;
 
-// Global variables:
+//
 
 const game = new Phaser.Game(config);
 
@@ -1447,5 +1466,34 @@ function debuggingMenu() {
     dbMenu.children[1].innerHTML = 'Player Y: ' + Math.round(player.y*10)/10;
   };
 }
+
+function resetGlobalVars() {
+  parentThis = this;
+  centerX = config.width/2;
+  centerY = config.height/2;
+  coins;
+  food;
+  cursors;
+  cursorsPaused;
+  paused = false;
+  parentThis;
+  randBool = true;
+  for (let key in textObjects) {
+    destroyText(key);
+  }
+  textObjects = {};
+
+  zombiesFilter = false;
+  zombies = [];
+  zombieUsedIDs = [];
+  zombiesAlive = 0;
+  totalZombiesSpawned = 0;
+  //zombieTimer;
+  zombieSpawnpoints = [];
+  pickupables = [];
+
+  spawnEnemies = true;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -3,17 +3,7 @@ class Player extends Actor {
   constructor(scene, x, y, texture, speed, name=texture) {
     super(scene, x, y, texture, speed, name, true);
     this.score = 0;
-    this.getScore = () => this.score.toString().padStart(7, '0');
-    this.addScore = (points) => {
-      this.score += points;
-      updateText('playerScore', this.getScore);
-    };
     this.kills = 0;
-    this.getKills = () => this.kills.toString().padStart(3, '0');
-    this.addKill = () => {
-      this.kills++;
-      gameEnemyManager.decrement();
-    }
     this.holdingJump = false;
     this.holdingPunch = false;
     this.isPunching = false;
@@ -25,6 +15,27 @@ class Player extends Actor {
       let pos = config.width - 8 - (i * 12);
       this.hb.unshift(parentThis.add.image(pos, 8, 'heart'));
     }
+
+    // Player methods:
+
+    this.getScore = () => this.score.toString().padStart(7, '0');
+
+    this.setScore = (points) => {
+      this.score = points;
+      updateText('playerScore', this.getScore);
+    };
+
+    this.addScore = (points) => {
+      this.score += points;
+      updateText('playerScore', this.getScore);
+    };
+
+    this.getKills = () => this.kills.toString().padStart(3, '0');
+
+    this.addKill = () => {
+      this.kills++;
+      gameEnemyManager.decrement();
+    };
   
     this.addHealth = () => {
       if (this.health < 3) {
@@ -34,7 +45,7 @@ class Player extends Actor {
       else {
         this.addScore(1000);
       }
-    }
+    };
   
     this.punch = () => {
       this.playSoundPunch();
@@ -47,7 +58,7 @@ class Player extends Actor {
       let CollisionX = (this.flipX) ? this.x - 10 : this.x + 10;
       let punchbox = punchboxes.create(CollisionX, this.y, 'punchbox');
       parentThis.time.delayedCall(100, () => punchbox.destroy());
-    }
+    };
 
     this.update = () => {
       // Player input and animations conditionals:
@@ -107,6 +118,6 @@ class Player extends Actor {
       else {
         this.decayVelocityX(0.55);
       }
-    }
+    };
   }
 }

@@ -1,21 +1,3 @@
-// This code is mostly obsolete. Rewrite it to work with maps made in Tiled!!!
-
-/*function loadLevelTilesheets() {  // Also obsolete, but can be retooled to load .json files...
-  // Loads the level tilesheets of the game in the "levels" folder.
-  let fs = require('fs');
-  let fileNames = fs.readdirSync('../dev/root/dist/levels');
-  let res = [];
-  for (let file of fileNames) {
-    if (file == 'readme.txt') continue;
-    let level = fs
-      .readFileSync(`../dev/root/dist/levels/${file}`, 'utf-8')
-      .split(/\r\n|\n/);  // Windows and Linux/Unix compatible!
-    res.push(level);
-  }
-  return res;
-}*/
-
-
 function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder, and
   // returns an array of the keys for the levels.
@@ -29,8 +11,6 @@ function loadLevelTilesheets() {
       fileKey,
       `levels/${file}`
     );
-    console.log(fileKey);
-    console.log(`levels/${file}`);
     res.push(fileKey);
   }
   return res;
@@ -40,17 +20,12 @@ function randomLevel() {
   return levels[Math.floor(Math.random()*levels.length)];
 }
 
-//let gameLevels = loadLevelTilesheets();
-
-// (OBSOLETE) Level loading code:
-// let level = gameLevels[Math.floor(Math.random()*gameLevels.length)];
-
 function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
 }
 
 function createZombieSpawn(x, y) {
-  zombieSpawnpoints.push([x, y])
+  zombieSpawnpoints.push([x, y]);
 }
 
 function getValidItemSpawnAreas() {

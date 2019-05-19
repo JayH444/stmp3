@@ -11,8 +11,9 @@ class mainScene extends Phaser.Scene {
 
 function preload() {
   parentThis = this;
-
-  window.levels = loadLevelTilesheets();
+  if (skipTitle) {
+    currentLevel = (pickRandomLevel) ? randomLevel() : levels[levelNumber];
+  }
 }
 
 function create() {
@@ -26,10 +27,10 @@ function create() {
   window.edgeNodes = this.physics.add.staticGroup();
   window.grass = this.physics.add.staticGroup();
 
-  window.map = this.make.tilemap({key: randomLevel()});
+  window.map = this.make.tilemap({key: currentLevel});
+  console.log(map);
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
-  console.log(map);
   platforms.setCollisionByProperty({collides: true});
 
   // Entity creation code:
@@ -55,6 +56,7 @@ function create() {
 
   let playerArgs = [parentThis, centerX, config.height-32, 'player', 160];
   window.player = new Player(...playerArgs);
+  player.setScore(totalScore);
 
   // Collision detection for player and zombies:
   window.player.colliders = {};
@@ -67,7 +69,7 @@ function create() {
   // Game enemy manager:
   window.gameEnemyManager = new EnemyManagerClass();
   // Game timer:
-  window.theTimer = new gameTimer(gameEnemyManager);
+  window.gameTimer = new gameTimerClass(gameEnemyManager);
 
   // Game topbar text:
   let scoreX = 8;
@@ -78,8 +80,8 @@ function create() {
   printText(gameEnemyManager.getEnemyCountText(), foesX + 40, 8, 'foesLeft');
   let timeX = 212;
   printText('TIME:', timeX, 8, 'timeText');
-  printText(theTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
-  theTimer.startTimer();
+  printText(gameTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
+  gameTimer.startTimer();
 
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
@@ -164,15 +166,22 @@ function create() {
 function update() {
   parentThis = this;
 
-
   if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
-    console.log('pausing...');
     paused = true;
     this.scene.launch('pausedScene');
     this.scene.pause('mainScene');
   } 
   else {
-      this.scene.resume('mainScene');
+    this.scene.resume('mainScene');
+  }
+
+  if (!player.alive) {  // Trigger game over.
+    gameTimer.timerEvent.paused = true;
+    totalScore = player.getScore();
+    setTimeout(() => {
+      parentThis.scene.launch('gameOverScene');
+      parentThis.scene.stop('mainScene');
+    }, 1500);
   }
 
   player.update();

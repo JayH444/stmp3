@@ -16,7 +16,7 @@ let config = {
   ]
 };
 
-// Global variables:
+// -- Global variables: -- //
 
 let centerX = config.width/2;
 let centerY = config.height/2;
@@ -39,18 +39,22 @@ let zombiesFilter = false;
 let zombies = [];
 let zombieUsedIDs = [];
 let zombiesAlive = 0;
+let totalZombiesSpawned = 0;
 let zombieTimer;
 let zombieSpawnpoints = [];
 let totalScore = 0;
+let currentLevel;
+let levelNumber = 0;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
-let skipTitle = false;
+let skipTitle = true;
 let showVisionRays = false;
+let pickRandomLevel = false;
 
-// Global variables:
+//
 
 const game = new Phaser.Game(config);
 
@@ -61,4 +65,32 @@ function debuggingMenu() {
     dbMenu.children[0].innerHTML = 'Player X: ' + Math.round(player.x*10)/10;
     dbMenu.children[1].innerHTML = 'Player Y: ' + Math.round(player.y*10)/10;
   };
+}
+
+function resetGlobalVars() {
+  parentThis = this;
+  centerX = config.width/2;
+  centerY = config.height/2;
+  coins;
+  food;
+  cursors;
+  cursorsPaused;
+  paused = false;
+  parentThis;
+  randBool = true;
+  for (let key in textObjects) {
+    destroyText(key);
+  }
+  textObjects = {};
+
+  zombiesFilter = false;
+  zombies = [];
+  zombieUsedIDs = [];
+  zombiesAlive = 0;
+  totalZombiesSpawned = 0;
+  //zombieTimer;
+  zombieSpawnpoints = [];
+  pickupables = [];
+
+  spawnEnemies = true;
 }

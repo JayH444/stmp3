@@ -1,15 +1,18 @@
 class EnemyManagerClass {
-  constructor() {
-    this.enemyCount = Math.floor(Math.random()*12 + 12);
+  constructor(enemyCountMedian=12, enemyCountRange=12) {
+    let ecm = enemyCountMedian;
+    let ecr = enemyCountRange;
+    this.initialEnemyCount = Math.floor(Math.random()*ecr + ecm);
+    this.currentEnemyCount = this.initialEnemyCount;
     this.decrement = this.decrement.bind(this);
     this.getEnemyCountText = this.getEnemyCountText.bind(this);
   }
   getEnemyCountText() {
-    return this.enemyCount.toString().padStart(3, '0');
+    return this.currentEnemyCount.toString().padStart(3, '0');
   }
   decrement() {
-    if (this.enemyCount > 0) {
-      this.enemyCount--;
+    if (this.currentEnemyCount > 0) {
+      this.currentEnemyCount--;
       updateText('foesLeft', this.getEnemyCountText);
     }
   }

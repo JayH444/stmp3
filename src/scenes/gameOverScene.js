@@ -14,30 +14,6 @@ function gameOverPreload() {
 }
 
 function gameOverCreate() {
-  parentThis = this;
-  centerX = config.width/2;
-  centerY = config.height/2;
-  coins;
-  food;
-  cursors;
-  cursorsPaused;
-  paused = false;
-  parentThis;
-  randBool = true;
-  for (let key in textObjects) {
-    destroyText(key);
-  }
-  textObjects = {};
-
-  zombiesFilter = false;
-  zombies = [];
-  zombieUsedIDs = [];
-  zombiesAlive = 0;
-  //zombieTimer;
-  zombieSpawnpoints = [];
-  pickupables = [];
-
-  spawnEnemies = true;
   printTextCenter('Game Over', 'gameOverText', centerY-8);
   printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
   setTimeout(() => {

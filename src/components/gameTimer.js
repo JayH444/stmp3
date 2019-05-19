@@ -1,4 +1,4 @@
-class gameTimer {
+class gameTimerClass {
   // Class for the game timer and its properties and methods.
   // enemyManager is passed in as the argument to keep track of the number of
   // enemies alive, which is used for the timer's win/lose state.
@@ -12,9 +12,15 @@ class gameTimer {
       this.timeRemaining = 90;
     };
     this.tickTimer = () => {
-      this.timeRemaining--;
+      if (enemyManager.currentEnemyCount > 0) {
+        this.timeRemaining--;
+      }
+      else {
+        this.timerEvent.paused = true;
+        completeLevel()
+      }
       if (this.timeRemaining === 0) {
-        if (enemyManager.enemyCount > 0) {
+        if (enemyManager.currentEnemyCount > 0) {
           player.die();
           for (let z of zombies) {
             z.die();
@@ -26,7 +32,8 @@ class gameTimer {
           setTimeout(() => {
             parentThis.scene.launch('gameOverScene');
             parentThis.scene.stop('mainScene');
-          }, 1000);
+            resetGlobalVars()
+          }, 1500);
         }
         else {
           this.resetTime();
