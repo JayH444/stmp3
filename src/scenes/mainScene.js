@@ -27,8 +27,7 @@ function create() {
   window.edgeNodes = this.physics.add.staticGroup();
   window.grass = this.physics.add.staticGroup();
 
-  window.map = this.make.tilemap({key: currentLevel});
-  console.log(map);
+  window.map = parentThis.make.tilemap({key: currentLevel});
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
   platforms.setCollisionByProperty({collides: true});
@@ -56,15 +55,8 @@ function create() {
 
   let playerArgs = [parentThis, centerX, config.height-32, 'player', 160];
   window.player = new Player(...playerArgs);
-  player.setScore(totalScore);
-
-  // Collision detection for player and zombies:
-  window.player.colliders = {};
-  for (let zed of zombies) {
-    zed.collisionArgs = [player, zed, player.getHit, null, this]
-    zed.collider = this.physics.add.overlap(...zed.collisionArgs);
-    player.colliders[zed.id] = zed.collider;
-  }
+  player.score = totalScore;
+  player.setHealth(lastLevelHealth);
 
   // Game enemy manager:
   window.gameEnemyManager = new EnemyManagerClass();
@@ -94,11 +86,19 @@ function create() {
     p: Phaser.Input.Keyboard.KeyCodes.P
   });
 
-  // Zombie spawner:
-  
-  let timerArgs = {delay: 3000, callback: CreateRandomZombie, repeat: -1};
-  zombieTimer = this.time.addEvent(timerArgs);
-  
+  // Enemy spawn timer:
+
+  function createRandomEnemy() {
+    let condB = totalEnemiesSpawned < gameEnemyManager.initialEnemyCount;
+    if (enemiesAlive.length <= 9 && condB) {
+      totalEnemiesSpawned++;
+      let options = [CreateRandomZombie, CreateRandomAcidBug];
+      return options[Math.floor(Math.random() * options.length)]();
+    }
+  }
+
+  let timerArgs = {delay: 3000, callback: createRandomEnemy, repeat: -1};
+  enemySpawnTimer = this.time.addEvent(timerArgs);
 
   // Pickupables:
 
@@ -166,18 +166,27 @@ function create() {
 function update() {
   parentThis = this;
 
-  if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
-    paused = true;
-    this.scene.launch('pausedScene');
-    this.scene.pause('mainScene');
-  } 
-  else {
-    this.scene.resume('mainScene');
+  if (canPause) {
+    if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
+      paused = true;
+      this.scene.launch('pausedScene');
+      this.scene.pause('mainScene');
+    } 
+    else {
+      this.scene.resume('mainScene');
+    }
   }
 
-  if (!player.alive) {  // Trigger game over.
+  if (!spawnEnemies && enemySpawnTimer.paused == false) {
+    enemySpawnTimer.paused = true;
+  }
+  else if (spawnEnemies && enemySpawnTimer.paused == true) {
+    enemySpawnTimer.paused = false;
+  }
+
+  if (!player.alive && gameTimer.timeRemaining > 0) {  // Trigger game over.
     gameTimer.timerEvent.paused = true;
-    totalScore = player.getScore();
+    totalScore = player.score;
     setTimeout(() => {
       parentThis.scene.launch('gameOverScene');
       parentThis.scene.stop('mainScene');
@@ -190,31 +199,22 @@ function update() {
 
   // Monster stuff:
 
-  if (!spawnEnemies && zombieTimer.paused == false) {
-    zombieTimer.paused = true;
-  }
-  else if (spawnEnemies && zombieTimer.paused == true) {
-    zombieTimer.paused = false;
-  }
-
-  zombies.forEach((zombie) => {
-    if (zombie.destroyed && !zombiesFilter) {
-      zombiesFilter = true;
-      let ZedIdIndex = zombieUsedIDs.indexOf(zombie.id);
-      // Removes dead zombie ID from used IDs:
-      zombieUsedIDs.splice(ZedIdIndex, 1);
+  enemiesAlive.forEach((enemy) => {
+    if (enemy.destroyed) {
+      enemiesFilter = true;
     } else {
-      zombie.move(player);
+      enemy.move(player);
     }
-    if (zombie.alive && showVisionRays) {
-      parentThis.graphics.strokeLineShape(zombie.lineOfSight);
+    if (enemy.alive && showVisionRays) {
+      parentThis.graphics.strokeLineShape(enemy.lineOfSight);
     }
   });
 
-  if (zombiesFilter) {
+  
+  if (enemiesFilter) {
     // Cleanup for dead zombies in the zombies array.
-    zombies = zombies.filter(x => x.destroyed == false);
-    zombiesFilter = false;
+    enemiesAlive = enemiesAlive.filter(x => x.destroyed == false);
+    enemiesFilter = false;
   }
 
   //

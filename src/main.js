@@ -33,26 +33,26 @@ let textObjects = {};  // Object for storing the displayed texts.
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
 
-// Becomes true if a destroyed zombie is detected in the zombies array:
-let zombiesFilter = false;
-// Array for storing alive zombies to be iterated over for movement:
-let zombies = [];
-let zombieUsedIDs = [];
-let zombiesAlive = 0;
-let totalZombiesSpawned = 0;
-let zombieTimer;
-let zombieSpawnpoints = [];
+// Array used for storing and iterating over the alive enemies for their AI:
+let enemiesAlive = [];
+// Becomes true if a destroyed enemy is detected in the enemies array:
+let enemiesFilter = false;
+
+let totalEnemiesSpawned = 0;
+let enemySpawnpoints = [];
 let totalScore = 0;
 let currentLevel;
 let levelNumber = 0;
+let lastLevelHealth = 3;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
-let skipTitle = true;
+let skipTitle = false;
 let showVisionRays = false;
 let pickRandomLevel = false;
+let canPause = true;
 
 //
 
@@ -68,29 +68,28 @@ function debuggingMenu() {
 }
 
 function resetGlobalVars() {
-  parentThis = this;
   centerX = config.width/2;
   centerY = config.height/2;
-  coins;
-  food;
-  cursors;
-  cursorsPaused;
+  coins = undefined;
+  food = undefined;
+  cursors = undefined;
+  cursorsPaused = undefined;
   paused = false;
-  parentThis;
   randBool = true;
   for (let key in textObjects) {
     destroyText(key);
   }
   textObjects = {};
 
-  zombiesFilter = false;
-  zombies = [];
-  zombieUsedIDs = [];
-  zombiesAlive = 0;
-  totalZombiesSpawned = 0;
-  //zombieTimer;
-  zombieSpawnpoints = [];
+  totalEnemiesSpawned = 0;
+  enemySpawnpoints = [];
+  enemiesAlive = [];
+  enemiesFilter = false;
   pickupables = [];
+  currentLevel = undefined;
+  levelNumber = 0;
+  lastLevelHealth = 3;
 
   spawnEnemies = true;
+  canPause = true;
 }

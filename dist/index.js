@@ -16,8 +16,11 @@ function gameOverPreload() {
 }
 
 function gameOverCreate() {
+  parentThis = this;
+  resetGlobalVars()
   printTextCenter('Game Over', 'gameOverText', centerY-8);
   printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
+  totalScore = 0;
   setTimeout(() => {
     parentThis.scene.launch('titleScene');
     parentThis.scene.stop('gameOverScene');    
@@ -51,7 +54,8 @@ function levelIntroPreload() {
 
 function levelIntroCreate() {
   parentThis = this;
-  let levelName = (map.properties[0]) ? map.properties[0].value : currentLevel;
+  let mapNameProperty = parentThis.cache.tilemap.entries.entries[currentLevel].data.properties[0];
+  let levelName = (mapNameProperty) ? mapNameProperty.value : currentLevel;
   printTextCenter(levelName, 'levelIntroText');
   setTimeout(() => {
     parentThis.scene.launch('mainScene');
@@ -126,6 +130,10 @@ function loadingPreload() {  // Loads game assets.
   );
   // Zombie spritesheet:
   this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
+    {frameWidth: 16, frameHeight: 16}
+  );
+  // Acid bug spritesheet:
+  this.load.spritesheet('acidBug', 'assets/spritesheet_acidbug.png',
     {frameWidth: 16, frameHeight: 16}
   );
 
@@ -216,8 +224,7 @@ function create() {
   window.edgeNodes = this.physics.add.staticGroup();
   window.grass = this.physics.add.staticGroup();
 
-  window.map = this.make.tilemap({key: currentLevel});
-  console.log(map);
+  window.map = parentThis.make.tilemap({key: currentLevel});
   window.tiles = map.addTilesetImage('gameTiles', 'tiles');
   window.platforms = map.createDynamicLayer('background', tiles, -16, 0);
   platforms.setCollisionByProperty({collides: true});
@@ -245,15 +252,8 @@ function create() {
 
   let playerArgs = [parentThis, centerX, config.height-32, 'player', 160];
   window.player = new Player(...playerArgs);
-  player.setScore(totalScore);
-
-  // Collision detection for player and zombies:
-  window.player.colliders = {};
-  for (let zed of zombies) {
-    zed.collisionArgs = [player, zed, player.getHit, null, this]
-    zed.collider = this.physics.add.overlap(...zed.collisionArgs);
-    player.colliders[zed.id] = zed.collider;
-  }
+  player.score = totalScore;
+  player.setHealth(lastLevelHealth);
 
   // Game enemy manager:
   window.gameEnemyManager = new EnemyManagerClass();
@@ -283,11 +283,19 @@ function create() {
     p: Phaser.Input.Keyboard.KeyCodes.P
   });
 
-  // Zombie spawner:
-  
-  let timerArgs = {delay: 3000, callback: CreateRandomZombie, repeat: -1};
-  zombieTimer = this.time.addEvent(timerArgs);
-  
+  // Enemy spawn timer:
+
+  function createRandomEnemy() {
+    let condB = totalEnemiesSpawned < gameEnemyManager.initialEnemyCount;
+    if (enemiesAlive.length <= 9 && condB) {
+      totalEnemiesSpawned++;
+      let options = [CreateRandomZombie, CreateRandomAcidBug];
+      return options[Math.floor(Math.random() * options.length)]();
+    }
+  }
+
+  let timerArgs = {delay: 3000, callback: createRandomEnemy, repeat: -1};
+  enemySpawnTimer = this.time.addEvent(timerArgs);
 
   // Pickupables:
 
@@ -355,18 +363,27 @@ function create() {
 function update() {
   parentThis = this;
 
-  if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
-    paused = true;
-    this.scene.launch('pausedScene');
-    this.scene.pause('mainScene');
-  } 
-  else {
-    this.scene.resume('mainScene');
+  if (canPause) {
+    if (Phaser.Input.Keyboard.JustDown(cursors.p) && !paused) {
+      paused = true;
+      this.scene.launch('pausedScene');
+      this.scene.pause('mainScene');
+    } 
+    else {
+      this.scene.resume('mainScene');
+    }
   }
 
-  if (!player.alive) {  // Trigger game over.
+  if (!spawnEnemies && enemySpawnTimer.paused == false) {
+    enemySpawnTimer.paused = true;
+  }
+  else if (spawnEnemies && enemySpawnTimer.paused == true) {
+    enemySpawnTimer.paused = false;
+  }
+
+  if (!player.alive && gameTimer.timeRemaining > 0) {  // Trigger game over.
     gameTimer.timerEvent.paused = true;
-    totalScore = player.getScore();
+    totalScore = player.score;
     setTimeout(() => {
       parentThis.scene.launch('gameOverScene');
       parentThis.scene.stop('mainScene');
@@ -379,31 +396,22 @@ function update() {
 
   // Monster stuff:
 
-  if (!spawnEnemies && zombieTimer.paused == false) {
-    zombieTimer.paused = true;
-  }
-  else if (spawnEnemies && zombieTimer.paused == true) {
-    zombieTimer.paused = false;
-  }
-
-  zombies.forEach((zombie) => {
-    if (zombie.destroyed && !zombiesFilter) {
-      zombiesFilter = true;
-      let ZedIdIndex = zombieUsedIDs.indexOf(zombie.id);
-      // Removes dead zombie ID from used IDs:
-      zombieUsedIDs.splice(ZedIdIndex, 1);
+  enemiesAlive.forEach((enemy) => {
+    if (enemy.destroyed) {
+      enemiesFilter = true;
     } else {
-      zombie.move(player);
+      enemy.move(player);
     }
-    if (zombie.alive && showVisionRays) {
-      parentThis.graphics.strokeLineShape(zombie.lineOfSight);
+    if (enemy.alive && showVisionRays) {
+      parentThis.graphics.strokeLineShape(enemy.lineOfSight);
     }
   });
 
-  if (zombiesFilter) {
+  
+  if (enemiesFilter) {
     // Cleanup for dead zombies in the zombies array.
-    zombies = zombies.filter(x => x.destroyed == false);
-    zombiesFilter = false;
+    enemiesAlive = enemiesAlive.filter(x => x.destroyed == false);
+    enemiesFilter = false;
   }
 
   //
@@ -558,15 +566,24 @@ function titleUpdate() {
 
 //- src\functions\levelFunctions.js -//////////////////////////////////////////
 
-function completeLevel(advance=true) {
+function resetGlobalVarsForLevelAdvance(willAdvance=true) {
+  let nextLevel = levelNumber;
+  let nextLevelHealth = player.health;
+  if (nextLevel < levels.length-1 && willAdvance == true) nextLevel++;
+  resetGlobalVars()
+  levelNumber = nextLevel;
+  lastLevelHealth = nextLevelHealth;
+}
+
+function completeLevel(willAdvance=true) {
+  canPause = false;
   if (!textObjects.hasOwnProperty('levelClearedText')) {
     printTextCenter('Level cleared!', 'levelClearedText');
   }
   setTimeout(() => {
-    if (levelNumber < levels.length-1 && advance == true) levelNumber++;
     parentThis.scene.launch('levelIntroScene');
     parentThis.scene.stop('mainScene');
-    resetGlobalVars()
+    resetGlobalVarsForLevelAdvance(willAdvance);
   }, 3000);
 }
 
@@ -664,8 +681,8 @@ function destroyText(textId) {
 //- src\components\enemyManager.js -///////////////////////////////////////////
 
 class EnemyManagerClass {
-  constructor(enemyCountMedian=12, enemyCountRange=12) {
-    let ecm = enemyCountMedian;
+  constructor(enemyCountMinimum=15, enemyCountRange=15) {
+    let ecm = enemyCountMinimum;
     let ecr = enemyCountRange;
     this.initialEnemyCount = Math.floor(Math.random()*ecr + ecm);
     this.currentEnemyCount = this.initialEnemyCount;
@@ -707,22 +724,18 @@ class gameTimerClass {
       }
       else {
         this.timerEvent.paused = true;
+        totalScore = player.score;
         completeLevel()
       }
       if (this.timeRemaining === 0) {
         if (enemyManager.currentEnemyCount > 0) {
           player.die();
-          for (let z of zombies) {
-            z.die();
-          }
-          zombiesAlive = 0;
           spawnEnemies = false;
           this.timerEvent.paused = true;
-          totalScore = player.getScore();
+          totalScore = player.score;
           setTimeout(() => {
             parentThis.scene.launch('gameOverScene');
             parentThis.scene.stop('mainScene');
-            resetGlobalVars()
           }, 1500);
         }
         else {
@@ -771,8 +784,13 @@ function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
 }
 
+
+function createEnemySpawn(x, y) {
+  enemySpawnpoints.push([x, y]);
+}
+
 function createZombieSpawn(x, y) {
-  zombieSpawnpoints.push([x, y]);
+  createEnemySpawn(x, y);
 }
 
 function getValidItemSpawnAreas() {
@@ -876,9 +894,14 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       this.alive = false;
       this.health = 0;
       this.anims.play(this.name + 'Die');
-      if (this.collision) this.collision.destroy();
+      if (Boolean(this.collider)) {
+        this.collider.destroy();
+      }
+      if (Boolean(this.collision)) {
+        this.collision.destroy();
+      }
       parentThis.time.delayedCall(1000, () => this.destroyed = true);
-      //parentThis.time.delayedCall(5000, () => this.destroy());
+      parentThis.time.delayedCall(5000, () => this.destroy());
     }
 
     this.stun = (time, invulnerable=false) => {
@@ -910,7 +933,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       if (target2.body.touching.up) {
         // target1 is above target2 (headstomp)
         this.playSoundPunch();
-        parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
         if (target1.hasOwnProperty('addScore')) {
           target1.addScore(100);
         }
@@ -919,7 +941,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
         }
         parentThis.physics.world.removeCollider(target2.punchCollider);
         target2.die();
-        zombiesAlive--;
         target1.setVelocityY(-250);
       } 
       else {
@@ -930,10 +951,7 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
           if (!target1.stunned) {
             // Stuns target1 so they can't move and don't take further damage.
             this.playSoundPunch();
-            target1.health--;
-            if (target1.hb.length) {
-              target1.hb[2 - target1.health].setVisible(false);
-            }
+            target1.decrementHealth();
           }
           target1.stun(200, true);
           let velocity = 400;
@@ -953,12 +971,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
           }
           if (target1.health <= 0) {
             target1.body.velocity.x *= -1;
-            // Disables collision with target1:
-            for (let c in target1.colliders) {
-              parentThis.physics.world.removeCollider(target1.colliders[c]);
-            }
-            // Destroys the contents of colliders since target1 is dead:
-            target1.colliders = {};
             target1.die();
           }
         }
@@ -1005,6 +1017,226 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
 
   }
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\actors\acidBugActor.js -///////////////////////////////////////////////
+
+class AcidBug extends Actor {
+  // Creates a acidBug.
+  constructor(scene, x, y) {
+    let superArgs = [
+      scene, x, y,
+      'acidBug',
+      80 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
+      'acidBug',  // Name is the same as texture.
+      false,  // Doesn't collide with world bounds.
+    ];
+    super(...superArgs);
+    this.standingAtTarget = false;
+    this.nodeTouched = false;
+    this.chasing = false;
+    this.animSpeed *= 3;
+    this.seesTarget = false;
+    this.wandering = true;
+    let losArgs = [this.x, this.y, (this.flipX) ? 0 : config.width, this.y];
+    this.lineOfSight = new Phaser.Geom.Line(...losArgs);
+
+    // -- AcidBug AI stuff -- //
+
+    this.lastx = this.x;
+    this.updateLastX = () => {
+      this.lastx = this.x;
+    }
+    let posTimerArgs = {delay: 200, callback: this.updateLastX, repeat: -1};
+    this.positionTimer = parentThis.time.addEvent(posTimerArgs);
+
+    let wanderDirection = false;  // false == right, true == left
+    this.newWanderDir = () => {
+      wanderDirection = Boolean(Phaser.Math.Between(0, 1));
+    }
+    this.wanderTimerArgs = {
+      delay: 2000, callback: this.newWanderDir, repeat: -1
+    };
+    this.wanderTimer = parentThis.time.addEvent(this.wanderTimerArgs);
+
+    this.wander = () => {
+      // When the bug isn't pursuing the player.
+      this.wandering = true;
+      let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
+      //let validMovementRange = this.x > this.width;
+      if (this.wanderTimer.elapsed < 1700) {
+        if (this.x <= this.width/2 - 2) {
+          wanderDirection = false;
+        }
+        else if (this.x >= config.width - this.width/2 + 2) {
+          wanderDirection = true;
+        }
+        this.go(movementSpeed);
+      }
+      else {
+        this.goIdle();
+      }
+    }
+    
+    this.go = (speed) => {
+      this.moveX(speed, this.drag);
+      this.anims.play('acidBugMove', true);
+      this.flipX = (speed < 0) ? true : false;
+    }
+    
+    this.move = (target) => {  // Acid bug movement AI.
+      if (this.alive) {
+        // This controls the acidBug's LoS raycast.
+        let flipTernary = (this.flipX) ? 0 : config.width;
+        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
+        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
+        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
+          // If the acidBug is facing left, then the tiles within the line 
+          // should be iterated right-to-left instead of left-to-right.
+          let tile = tilesWithinShape[i];
+          if (tile.collides) {
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+            break;
+          }
+          (this.flipX) ? i-- : i++;
+        }
+      }
+      else {
+        delete this.lineOfSight;
+      }
+      if (this.alive && !this.stunned) {
+        if (noAI === false) { // Ignored if noAI is true.
+          // Stuff for when the acidBugs sees the player:
+          this.seesPlayerRight = (
+            (this.x < target.x && !this.flipX) &&
+            this.lineOfSight.x2 >= target.x &&
+            Math.abs(this.y - target.y) <= 16 &&
+            target.alive
+          );
+          this.seesPlayerLeft = (
+            (this.x > target.x && this.flipX) &&
+            this.lineOfSight.x2 <= target.x &&
+            Math.abs(this.y - target.y) <= 16 &&
+            target.alive
+          );
+          // Movement conditionals, ignored if noTarget is enabled:
+          if (this.seesPlayerLeft && !noTarget) {
+            this.go(-this.speed);
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
+          }
+          else if (this.seesPlayerRight && !noTarget) {
+            this.go(this.speed);
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
+          }
+          else {
+            this.wander();
+            parentThis.graphics.lineStyle(1, 0xFF0000, 1);
+          }
+          let touchingWall = this.body.blocked.left || this.body.blocked.right;
+          if (touchingWall && this.x === this.lastx) {
+            // If touching a wall and not moved since last position...
+            this.setVelocityY(-125);
+          }
+        }
+        else {
+          this.goIdle();
+        }
+      }
+      else {
+        if (this.body.collideWorldBounds) {
+          this.setCollideWorldBounds(false);
+        }
+        //if (!this.destroyed) {
+          this.decayVelocityX(0.55);
+        //}
+      }
+    }
+
+    // -- End Acid bug AI -- //
+
+    parentThis.physics.add.collider(this, platforms);
+    this.getHit = (target1, punchObject) => {
+      // When a acidBug gets hit, e.g. by a punch.
+      target1.stun(400);
+      target1.setVelocityY(-150);
+      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
+      target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
+      punchObject.destroy();
+      parentThis.physics.world.removeCollider(this.collider);
+      parentThis.physics.world.removeCollider(this.punchCollider);
+      target1.die();
+      player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
+      player.addKill();
+    }
+    // Adding punch collision:
+    this.punchboxArgs = [this, punchboxes, this.getHit, null, parentThis];
+    this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
+    
+    // Player collision stuff:
+    this.collisionArgs = [player, this, player.getHit, null, this]
+    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
+    
+    this.changeDir = (buggeh, node) => {
+      if (this.wandering && this.body.blocked.down) {
+        if (this.x <= node.x) {
+          wanderDirection = true;
+        }
+        else if (this.x > node.x) {
+          wanderDirection = false;
+        }
+      }
+    }
+
+    this.edgeDetectorArgs = [
+      this, edgeNodes, this.changeDir, null, parentThis
+    ];
+    let edArgs = this.edgeDetectorArgs;
+    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
+    enemiesAlive.push(this);
+  }
+}
+
+function CreateRandomAcidBug() {
+  let randomSpawn = parseInt(Math.random() * enemySpawnpoints.length);
+  let x = enemySpawnpoints[randomSpawn][0];
+  let y = enemySpawnpoints[randomSpawn][1];
+  new AcidBug(parentThis, x, y);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\actors\batActor.js -///////////////////////////////////////////////////
+
+class Bat extends Actor {
+  constructor(scene, x, y) {
+    let superArgs = [
+      scene, x, y,
+      'bat',
+      60 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
+      'bat',  // Name is the same as texture.
+      false,  // Doesn't collide with world bounds.
+    ];
+    super(...superArgs);
+    
+  }
+}
+
+// Like the zombie, the bat is going to need some kind of ID system.
+// It would be best to make that some kind of part of the general enemy actor class.
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\actors\enemyActor.js -/////////////////////////////////////////////////
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1059,6 +1291,25 @@ class Player extends Actor {
         this.addScore(1000);
       }
     };
+
+    this.decrementHealth = () => {
+      this.health--;
+      if (this.hb.length) {
+        this.hb[2 - this.health].setVisible(false);
+      }
+    };
+
+    this.setHealth = (hp) => {
+      if (hp > 3 || hp < 0) {
+        hp = (hp > 3) ? 3 : 0;
+      }
+      while (hp < this.health) {
+        this.decrementHealth();
+      }
+      while (hp > this.health) {
+        this.addHealth();
+      }
+    };
   
     this.punch = () => {
       this.playSoundPunch();
@@ -1076,6 +1327,10 @@ class Player extends Actor {
     this.update = () => {
       // Player input and animations conditionals:
       const onGround = this.body.blocked.down;
+
+      if (this.health == 0) {
+        this.die();
+      }
 
       if (this.alive) {
         if (!(cursors.left.isDown && cursors.right.isDown)) {
@@ -1151,16 +1406,6 @@ class Zombie extends Actor {
       false,  // Doesn't collide with world bounds.
     ];
     super(...superArgs);
-    // Generates an ID for the zombies to be addressed by.
-    // Technically will encounter problems if the count gets too high, 
-    // but by that point you got bigger issues anyway...
-    let IDNum = parseInt(Math.random() * 1000000);
-    while (zombieUsedIDs.includes(IDNum)) {
-      // Just in case the ID is already used...
-      IDNum = parseInt(Math.random() * 1000000);
-    }
-    this.id = IDNum;
-    zombieUsedIDs.push(IDNum);
     this.standingAtTarget = false;
     this.nodeTouched = false;
     this.chasing = false;
@@ -1230,13 +1475,6 @@ class Zombie extends Actor {
           }
           (this.flipX) ? i-- : i++;
         }
-        /*for (let tile of tilesWithinShape) {
-          if (tile.collides) {
-            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
-            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-            break;
-          }
-        }*/
       }
       else {
         delete this.lineOfSight;
@@ -1294,11 +1532,6 @@ class Zombie extends Actor {
     // -- End zombie AI -- //
 
     parentThis.physics.add.collider(this, platforms);
-    if (player.alive) {
-      this.collisionArgs = [player, this, player.getHit, null, parentThis]
-      this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
-      player.colliders[this.id] = this.collider;
-    }
     this.getHit = (target1, punchObject) => {
       // When a zombie gets hit, e.g. by a punch.
       target1.stun(400);
@@ -1309,7 +1542,6 @@ class Zombie extends Actor {
       parentThis.physics.world.removeCollider(this.collider);
       parentThis.physics.world.removeCollider(this.punchCollider);
       target1.die();
-      zombiesAlive--;
       player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
       player.addKill();
     }
@@ -1317,7 +1549,11 @@ class Zombie extends Actor {
     this.punchboxArgs = [this, punchboxes, this.getHit, null, parentThis];
     this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
     
-    this.changeDir = (node) => {
+    // Player collision stuff:
+    this.collisionArgs = [player, this, player.getHit, null, this]
+    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
+    
+    this.changeDir = (zombeh, node) => {
       if (this.wandering && this.body.blocked.down) {
         if (this.x <= node.x) {
           wanderDirection = true;
@@ -1333,19 +1569,14 @@ class Zombie extends Actor {
     ];
     let edArgs = this.edgeDetectorArgs;
     this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
-    zombies.push(this);
+    enemiesAlive.push(this);
   }
 }
 
 function CreateRandomZombie() {
-  let condA = zombiesAlive >= 10;
-  let condB = totalZombiesSpawned >= gameEnemyManager.initialEnemyCount;
-  if (condA || condB) return;
-  zombiesAlive++;
-  totalZombiesSpawned++;
-  let randomSpawn = parseInt(Math.random() * zombieSpawnpoints.length);
-  let x = zombieSpawnpoints[randomSpawn][0];
-  let y = zombieSpawnpoints[randomSpawn][1];
+  let randomSpawn = parseInt(Math.random() * enemySpawnpoints.length);
+  let x = enemySpawnpoints[randomSpawn][0];
+  let y = enemySpawnpoints[randomSpawn][1];
   new Zombie(parentThis, x, y);
 }
 
@@ -1433,26 +1664,26 @@ let textObjects = {};  // Object for storing the displayed texts.
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
 
-// Becomes true if a destroyed zombie is detected in the zombies array:
-let zombiesFilter = false;
-// Array for storing alive zombies to be iterated over for movement:
-let zombies = [];
-let zombieUsedIDs = [];
-let zombiesAlive = 0;
-let totalZombiesSpawned = 0;
-let zombieTimer;
-let zombieSpawnpoints = [];
+// Array used for storing and iterating over the alive enemies for their AI:
+let enemiesAlive = [];
+// Becomes true if a destroyed enemy is detected in the enemies array:
+let enemiesFilter = false;
+
+let totalEnemiesSpawned = 0;
+let enemySpawnpoints = [];
 let totalScore = 0;
 let currentLevel;
 let levelNumber = 0;
+let lastLevelHealth = 3;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
 let spawnEnemies = true;
-let skipTitle = true;
+let skipTitle = false;
 let showVisionRays = false;
 let pickRandomLevel = false;
+let canPause = true;
 
 //
 
@@ -1468,31 +1699,30 @@ function debuggingMenu() {
 }
 
 function resetGlobalVars() {
-  parentThis = this;
   centerX = config.width/2;
   centerY = config.height/2;
-  coins;
-  food;
-  cursors;
-  cursorsPaused;
+  coins = undefined;
+  food = undefined;
+  cursors = undefined;
+  cursorsPaused = undefined;
   paused = false;
-  parentThis;
   randBool = true;
   for (let key in textObjects) {
     destroyText(key);
   }
   textObjects = {};
 
-  zombiesFilter = false;
-  zombies = [];
-  zombieUsedIDs = [];
-  zombiesAlive = 0;
-  totalZombiesSpawned = 0;
-  //zombieTimer;
-  zombieSpawnpoints = [];
+  totalEnemiesSpawned = 0;
+  enemySpawnpoints = [];
+  enemiesAlive = [];
+  enemiesFilter = false;
   pickupables = [];
+  currentLevel = undefined;
+  levelNumber = 0;
+  lastLevelHealth = 3;
 
   spawnEnemies = true;
+  canPause = true;
 }
 
 

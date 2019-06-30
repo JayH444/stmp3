@@ -17,22 +17,18 @@ class gameTimerClass {
       }
       else {
         this.timerEvent.paused = true;
+        totalScore = player.score;
         completeLevel()
       }
       if (this.timeRemaining === 0) {
         if (enemyManager.currentEnemyCount > 0) {
           player.die();
-          for (let z of zombies) {
-            z.die();
-          }
-          zombiesAlive = 0;
           spawnEnemies = false;
           this.timerEvent.paused = true;
-          totalScore = player.getScore();
+          totalScore = player.score;
           setTimeout(() => {
             parentThis.scene.launch('gameOverScene');
             parentThis.scene.stop('mainScene');
-            resetGlobalVars()
           }, 1500);
         }
         else {

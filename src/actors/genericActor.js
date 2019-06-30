@@ -57,9 +57,14 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       this.alive = false;
       this.health = 0;
       this.anims.play(this.name + 'Die');
-      if (this.collision) this.collision.destroy();
+      if (Boolean(this.collider)) {
+        this.collider.destroy();
+      }
+      if (Boolean(this.collision)) {
+        this.collision.destroy();
+      }
       parentThis.time.delayedCall(1000, () => this.destroyed = true);
-      //parentThis.time.delayedCall(5000, () => this.destroy());
+      parentThis.time.delayedCall(5000, () => this.destroy());
     }
 
     this.stun = (time, invulnerable=false) => {
@@ -91,7 +96,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       if (target2.body.touching.up) {
         // target1 is above target2 (headstomp)
         this.playSoundPunch();
-        parentThis.physics.world.removeCollider(target1.colliders[target2.id]);
         if (target1.hasOwnProperty('addScore')) {
           target1.addScore(100);
         }
@@ -100,7 +104,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
         }
         parentThis.physics.world.removeCollider(target2.punchCollider);
         target2.die();
-        zombiesAlive--;
         target1.setVelocityY(-250);
       } 
       else {
@@ -111,10 +114,7 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
           if (!target1.stunned) {
             // Stuns target1 so they can't move and don't take further damage.
             this.playSoundPunch();
-            target1.health--;
-            if (target1.hb.length) {
-              target1.hb[2 - target1.health].setVisible(false);
-            }
+            target1.decrementHealth();
           }
           target1.stun(200, true);
           let velocity = 400;
@@ -134,12 +134,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
           }
           if (target1.health <= 0) {
             target1.body.velocity.x *= -1;
-            // Disables collision with target1:
-            for (let c in target1.colliders) {
-              parentThis.physics.world.removeCollider(target1.colliders[c]);
-            }
-            // Destroys the contents of colliders since target1 is dead:
-            target1.colliders = {};
             target1.die();
           }
         }

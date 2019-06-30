@@ -58,6 +58,10 @@ function loadingPreload() {  // Loads game assets.
   this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
     {frameWidth: 16, frameHeight: 16}
   );
+  // Acid bug spritesheet:
+  this.load.spritesheet('acidBug', 'assets/spritesheet_acidbug.png',
+    {frameWidth: 16, frameHeight: 16}
+  );
 
   // Font spritesheet. Uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 

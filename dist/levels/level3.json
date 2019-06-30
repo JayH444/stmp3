@@ -2,7 +2,7 @@
  "infinite":false,
  "layers":[
         {
-         "data":[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2],
+         "data":[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 1, 1, 1, 0, 0, 1, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 0, 0, 0, 1, 2, 2, 2, 0, 1, 1, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 0, 2, 0, 0, 0, 0, 1, 2, 2, 2, 2, 1, 1, 0, 0, 0, 2, 1, 0, 0, 1, 1, 2, 1, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2],
          "height":15,
          "id":1,
          "name":"background",
@@ -15,12 +15,12 @@
         }, 
         {
          "draworder":"topdown",
-         "id":3,
+         "id":2,
          "name":"entities",
          "objects":[
                 {
                  "height":0,
-                 "id":16,
+                 "id":5,
                  "name":"",
                  "point":true,
                  "properties":[
@@ -33,84 +33,12 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":8,
-                 "y":64
+                 "x":168,
+                 "y":32
                 }, 
                 {
                  "height":0,
-                 "id":17,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":8,
-                 "y":224
-                }, 
-                {
-                 "height":0,
-                 "id":18,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":344,
-                 "y":64
-                }, 
-                {
-                 "height":0,
-                 "id":19,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":344,
-                 "y":224
-                }, 
-                {
-                 "height":0,
-                 "id":20,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":344,
-                 "y":144
-                }, 
-                {
-                 "height":0,
-                 "id":21,
+                 "id":11,
                  "name":"",
                  "point":true,
                  "properties":[
@@ -123,26 +51,62 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":152,
-                 "y":64
-                }, 
-                {
-                 "height":0,
-                 "id":24,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createEdgeNode"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":136,
+                 "x":232,
                  "y":176
+                }, 
+                {
+                 "height":0,
+                 "id":12,
+                 "name":"",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"function",
+                         "type":"string",
+                         "value":"createEdgeNode"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":72,
+                 "y":176
+                }, 
+                {
+                 "height":0,
+                 "id":14,
+                 "name":"",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"function",
+                         "type":"string",
+                         "value":"createEdgeNode"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":216,
+                 "y":32
+                }, 
+                {
+                 "height":0,
+                 "id":15,
+                 "name":"",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"function",
+                         "type":"string",
+                         "value":"createEdgeNode"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":120,
+                 "y":32
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -150,14 +114,14 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":4,
- "nextobjectid":25,
+ "nextlayerid":5,
+ "nextobjectid":16,
  "orientation":"orthogonal",
  "properties":[
         {
          "name":"levelName",
          "type":"string",
-         "value":"Level 1"
+         "value":"Level 3"
         }],
  "renderorder":"right-down",
  "tiledversion":"1.2.3",

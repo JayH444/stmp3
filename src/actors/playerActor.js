@@ -46,6 +46,25 @@ class Player extends Actor {
         this.addScore(1000);
       }
     };
+
+    this.decrementHealth = () => {
+      this.health--;
+      if (this.hb.length) {
+        this.hb[2 - this.health].setVisible(false);
+      }
+    };
+
+    this.setHealth = (hp) => {
+      if (hp > 3 || hp < 0) {
+        hp = (hp > 3) ? 3 : 0;
+      }
+      while (hp < this.health) {
+        this.decrementHealth();
+      }
+      while (hp > this.health) {
+        this.addHealth();
+      }
+    };
   
     this.punch = () => {
       this.playSoundPunch();
@@ -63,6 +82,10 @@ class Player extends Actor {
     this.update = () => {
       // Player input and animations conditionals:
       const onGround = this.body.blocked.down;
+
+      if (this.health == 0) {
+        this.die();
+      }
 
       if (this.alive) {
         if (!(cursors.left.isDown && cursors.right.isDown)) {

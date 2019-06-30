@@ -1,23 +1,24 @@
-class Zombie extends Actor {
-  // Creates a zombie.
+class AcidBug extends Actor {
+  // Creates a acidBug.
   constructor(scene, x, y) {
     let superArgs = [
       scene, x, y,
-      'zombie',
-      40 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
-      'zombie',  // Name is the same as texture.
+      'acidBug',
+      80 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
+      'acidBug',  // Name is the same as texture.
       false,  // Doesn't collide with world bounds.
     ];
     super(...superArgs);
     this.standingAtTarget = false;
     this.nodeTouched = false;
     this.chasing = false;
+    this.animSpeed *= 3;
     this.seesTarget = false;
     this.wandering = true;
     let losArgs = [this.x, this.y, (this.flipX) ? 0 : config.width, this.y];
     this.lineOfSight = new Phaser.Geom.Line(...losArgs);
 
-    // -- Zombie AI stuff -- //
+    // -- AcidBug AI stuff -- //
 
     this.lastx = this.x;
     this.updateLastX = () => {
@@ -36,7 +37,7 @@ class Zombie extends Actor {
     this.wanderTimer = parentThis.time.addEvent(this.wanderTimerArgs);
 
     this.wander = () => {
-      // When the zombie isn't pursuing the player.
+      // When the bug isn't pursuing the player.
       this.wandering = true;
       let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
       //let validMovementRange = this.x > this.width;
@@ -56,19 +57,19 @@ class Zombie extends Actor {
     
     this.go = (speed) => {
       this.moveX(speed, this.drag);
-      this.anims.play('zombieMove', true);
+      this.anims.play('acidBugMove', true);
       this.flipX = (speed < 0) ? true : false;
     }
     
-    this.move = (target) => {  // Zombie movement AI.
+    this.move = (target) => {  // Acid bug movement AI.
       if (this.alive) {
-        // This controls the zombie's LoS raycast.
+        // This controls the acidBug's LoS raycast.
         let flipTernary = (this.flipX) ? 0 : config.width;
         this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
         let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
         let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
         while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
-          // If the zombie is facing left, then the tiles within the line 
+          // If the acidBug is facing left, then the tiles within the line 
           // should be iterated right-to-left instead of left-to-right.
           let tile = tilesWithinShape[i];
           if (tile.collides) {
@@ -84,7 +85,7 @@ class Zombie extends Actor {
       }
       if (this.alive && !this.stunned) {
         if (noAI === false) { // Ignored if noAI is true.
-          // Stuff for when the zombies sees the player:
+          // Stuff for when the acidBugs sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
             this.lineOfSight.x2 >= target.x &&
@@ -132,11 +133,11 @@ class Zombie extends Actor {
       }
     }
 
-    // -- End zombie AI -- //
+    // -- End Acid bug AI -- //
 
     parentThis.physics.add.collider(this, platforms);
     this.getHit = (target1, punchObject) => {
-      // When a zombie gets hit, e.g. by a punch.
+      // When a acidBug gets hit, e.g. by a punch.
       target1.stun(400);
       target1.setVelocityY(-150);
       let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
@@ -156,7 +157,7 @@ class Zombie extends Actor {
     this.collisionArgs = [player, this, player.getHit, null, this]
     this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
     
-    this.changeDir = (zombeh, node) => {
+    this.changeDir = (buggeh, node) => {
       if (this.wandering && this.body.blocked.down) {
         if (this.x <= node.x) {
           wanderDirection = true;
@@ -176,9 +177,9 @@ class Zombie extends Actor {
   }
 }
 
-function CreateRandomZombie() {
+function CreateRandomAcidBug() {
   let randomSpawn = parseInt(Math.random() * enemySpawnpoints.length);
   let x = enemySpawnpoints[randomSpawn][0];
   let y = enemySpawnpoints[randomSpawn][1];
-  new Zombie(parentThis, x, y);
+  new AcidBug(parentThis, x, y);
 }

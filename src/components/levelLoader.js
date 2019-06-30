@@ -24,8 +24,13 @@ function createEdgeNode(x, y) {
   edgeNodes.create(x, y, 'edgenode');
 }
 
+
+function createEnemySpawn(x, y) {
+  enemySpawnpoints.push([x, y]);
+}
+
 function createZombieSpawn(x, y) {
-  zombieSpawnpoints.push([x, y]);
+  createEnemySpawn(x, y);
 }
 
 function getValidItemSpawnAreas() {
