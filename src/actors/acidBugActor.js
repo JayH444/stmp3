@@ -1,24 +1,53 @@
-class AcidBug extends Actor {
+class AcidBug extends enemyActor {
   // Creates a acidBug.
   constructor(scene, x, y) {
+    // Movement speed randomizer:
+    let speed = 80 * (1 + (Math.random() - 0.5) / 7)
     let superArgs = [
       scene, x, y,
       'acidBug',
-      80 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
-      'acidBug',  // Name is the same as texture.
-      false,  // Doesn't collide with world bounds.
+      speed,
+      speed*2, // Animations should be fairly fast.
     ];
     super(...superArgs);
+    this.body.setSize(16, 11);
+    this.body.setOffset(0, 5);
     this.standingAtTarget = false;
     this.nodeTouched = false;
     this.chasing = false;
-    this.animSpeed *= 3;
     this.seesTarget = false;
     this.wandering = true;
     let losArgs = [this.x, this.y, (this.flipX) ? 0 : config.width, this.y];
     this.lineOfSight = new Phaser.Geom.Line(...losArgs);
 
     // -- AcidBug AI stuff -- //
+
+    this.canSpit = true;
+    this.spitAcid = () => {
+      if (this.canSpit && this.alive) {
+        parentThis.sound.play('spit');
+        let xPos = (this.flipX) ? this.x - 2 : this.x + 2;
+        let acidBall = parentThis.physics.add.image(xPos, this.y+2, 'acid');
+        acidBall.setSize(4, 4);
+        acidBall.targetArgs = [
+          player, acidBall, player.getHitByProjectile, null, parentThis
+        ];
+        parentThis.physics.add.overlap(...acidBall.targetArgs);
+        let collideArgs = [acidBall, platforms, () => acidBall.destroy()];
+        parentThis.physics.add.collider(...collideArgs);
+        acidBall.setVelocityX(((this.flipX) ? -speed : speed) * 3);
+        acidBall.setVelocityY(-50);
+        this.canSpit = false;
+        parentThis.time.delayedCall(2000, () => this.canSpit = true);
+      }
+      parentThis.time.delayedCall(200, () => this.stunned = false);
+    }
+    
+    this.spitAttack = () => {
+      this.goIdle();
+      this.stunned = true;
+      parentThis.time.delayedCall(500, () => this.spitAcid());
+    }
 
     this.lastx = this.x;
     this.updateLastX = () => {
@@ -32,7 +61,7 @@ class AcidBug extends Actor {
       wanderDirection = Boolean(Phaser.Math.Between(0, 1));
     }
     this.wanderTimerArgs = {
-      delay: 2000, callback: this.newWanderDir, repeat: -1
+      delay: 1000, callback: this.newWanderDir, repeat: -1
     };
     this.wanderTimer = parentThis.time.addEvent(this.wanderTimerArgs);
 
@@ -41,7 +70,7 @@ class AcidBug extends Actor {
       this.wandering = true;
       let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
       //let validMovementRange = this.x > this.width;
-      if (this.wanderTimer.elapsed < 1700) {
+      if (this.wanderTimer.elapsed < 700) {
         if (this.x <= this.width/2 - 2) {
           wanderDirection = false;
         }
@@ -99,13 +128,26 @@ class AcidBug extends Actor {
             target.alive
           );
           // Movement conditionals, ignored if noTarget is enabled:
+          let pastLeftBorder = this.x > this.width/2 - 2
+          let pastRightBorder = this.x < config.width - this.width/2 + 2;
+          let onScreen = pastLeftBorder && pastRightBorder;
           if (this.seesPlayerLeft && !noTarget) {
-            this.go(-this.speed);
+            if (Math.abs(this.x - target.x) <= 64 && onScreen) {
+              this.spitAttack();
+            }
+            else {
+              this.go(-this.speed);
+            }
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
             parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else if (this.seesPlayerRight && !noTarget) {
-            this.go(this.speed);
+            if (Math.abs(this.x - target.x) <= 64 && onScreen) {
+              this.spitAttack();
+            }
+            else {
+              this.go(this.speed);
+            }
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
             parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
@@ -134,28 +176,6 @@ class AcidBug extends Actor {
     }
 
     // -- End Acid bug AI -- //
-
-    parentThis.physics.add.collider(this, platforms);
-    this.getHit = (target1, punchObject) => {
-      // When a acidBug gets hit, e.g. by a punch.
-      target1.stun(400);
-      target1.setVelocityY(-150);
-      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
-      target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
-      punchObject.destroy();
-      parentThis.physics.world.removeCollider(this.collider);
-      parentThis.physics.world.removeCollider(this.punchCollider);
-      target1.die();
-      player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
-      player.addKill();
-    }
-    // Adding punch collision:
-    this.punchboxArgs = [this, punchboxes, this.getHit, null, parentThis];
-    this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
-    
-    // Player collision stuff:
-    this.collisionArgs = [player, this, player.getHit, null, this]
-    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
     
     this.changeDir = (buggeh, node) => {
       if (this.wandering && this.body.blocked.down) {

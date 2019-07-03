@@ -1,11 +1,11 @@
 class Actor extends Phaser.Physics.Arcade.Sprite {
   // Constructor function "class" for creating an actor 
   // and its general methods and properties.
-  constructor(scene, x, y, texture, speed, name=texture, collideWB=true) {
+  constructor(scene, x, y, texture, speed, name=texture, animPlaySpeed=speed) {
     super(scene, x, y, texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setCollideWorldBounds(collideWB);
+    this.setCollideWorldBounds(true);
     this.name = name;
     this.body.setGravity(0, 500);
     this.body.setSize(8, 16);
@@ -20,8 +20,9 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
     this.destroyed = false;
     // Invulnerability period after getting hit (in ms):
     this.invulPeriod = 1500;
-    // Animation speed scales with actor's movement speed:
-    this.animSpeed = parseInt(0.09375 * this.speed);
+    // Animation speed scales with actor's movement speed,
+    // OR with a predefined value:
+    this.animSpeed = parseInt(0.09375 * animPlaySpeed);
     parentThis.physics.add.collider(this, platforms);
 
     // Methods:
@@ -89,10 +90,44 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
     this.playSoundPunch = () => {
       parentThis.sound.play('punch1');
     }
+
+    this.getHitByProjectile = (target, projectile) => {
+      if (!target.invul && target.alive) {
+        // target can't get hit if it is invulnerable
+        target.setVelocityY(-150);
+        if (!target.stunned) {
+          // Stuns target so they can't move and don't take further damage.
+          this.playSoundPunch();
+          target.decrementHealth();
+        }
+        target.stun(200, true);
+        let velocity = 100;
+        if (target.body.velocity.x < 0) {
+          // target is moving left...
+          target.body.velocity.x = velocity;
+        }
+        else if (target.body.velocity.x > 0) {
+          // target is moving right...
+          target.body.velocity.x = -velocity;
+        }
+        else {
+          // e.g. if target is standing still
+          // and the projectile hits it.
+          let dir = (projectile.body.velocity.x > 0) ? velocity : -velocity;
+          target.body.velocity.x = dir;
+        }
+        if (target.health <= 0) {
+          target.body.velocity.x *= -1;
+          target.die();
+        }
+      }
+      projectile.destroy();
+    }
   
     this.getHit = (target1, target2) => {
       // Function that executes when collision 
       // between target1 and target2 occurs.
+      if (!target1.alive || !target2.alive) return;
       if (target2.body.touching.up) {
         // target1 is above target2 (headstomp)
         this.playSoundPunch();

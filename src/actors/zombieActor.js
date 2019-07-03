@@ -1,12 +1,10 @@
-class Zombie extends Actor {
+class Zombie extends enemyActor {
   // Creates a zombie.
   constructor(scene, x, y) {
     let superArgs = [
       scene, x, y,
       'zombie',
       40 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
-      'zombie',  // Name is the same as texture.
-      false,  // Doesn't collide with world bounds.
     ];
     super(...superArgs);
     this.standingAtTarget = false;
@@ -135,26 +133,6 @@ class Zombie extends Actor {
     // -- End zombie AI -- //
 
     parentThis.physics.add.collider(this, platforms);
-    this.getHit = (target1, punchObject) => {
-      // When a zombie gets hit, e.g. by a punch.
-      target1.stun(400);
-      target1.setVelocityY(-150);
-      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
-      target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
-      punchObject.destroy();
-      parentThis.physics.world.removeCollider(this.collider);
-      parentThis.physics.world.removeCollider(this.punchCollider);
-      target1.die();
-      player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
-      player.addKill();
-    }
-    // Adding punch collision:
-    this.punchboxArgs = [this, punchboxes, this.getHit, null, parentThis];
-    this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
-    
-    // Player collision stuff:
-    this.collisionArgs = [player, this, player.getHit, null, this]
-    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
     
     this.changeDir = (zombeh, node) => {
       if (this.wandering && this.body.blocked.down) {

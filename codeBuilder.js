@@ -89,6 +89,7 @@ function runCodeBuilder(jsFiles, minify=false) {
     concatScriptsInArray(files.functions);
     concatScriptsInArray(files.components);
     concatScript(String.raw`src\actors\genericActor.js`);
+    concatScript(String.raw`src\actors\enemyActor.js`);
     concatScriptsInArray(files.actors);
     concatScript(String.raw`src\pickupables\genericPickupable.js`);
     concatScriptsInArray(files.pickupables);

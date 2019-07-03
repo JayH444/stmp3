@@ -20,42 +20,6 @@
          "objects":[
                 {
                  "height":0,
-                 "id":1,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":8,
-                 "y":208
-                }, 
-                {
-                 "height":0,
-                 "id":2,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":344,
-                 "y":192
-                }, 
-                {
-                 "height":0,
                  "id":3,
                  "name":"",
                  "point":true,
@@ -92,14 +56,68 @@
                 }, 
                 {
                  "height":0,
-                 "id":5,
+                 "id":9,
                  "name":"",
                  "point":true,
                  "properties":[
                         {
                          "name":"function",
                          "type":"string",
-                         "value":"createZombieSpawn"
+                         "value":"createEnemySpawn"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":8,
+                 "y":128
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"function",
+                         "type":"string",
+                         "value":"createEnemySpawn"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":8,
+                 "y":208
+                }, 
+                {
+                 "height":0,
+                 "id":11,
+                 "name":"",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"function",
+                         "type":"string",
+                         "value":"createEnemySpawn"
+                        }],
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":344,
+                 "y":192
+                }, 
+                {
+                 "height":0,
+                 "id":12,
+                 "name":"",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"function",
+                         "type":"string",
+                         "value":"createEnemySpawn"
                         }],
                  "rotation":0,
                  "type":"",
@@ -110,14 +128,14 @@
                 }, 
                 {
                  "height":0,
-                 "id":6,
+                 "id":13,
                  "name":"",
                  "point":true,
                  "properties":[
                         {
                          "name":"function",
                          "type":"string",
-                         "value":"createZombieSpawn"
+                         "value":"createEnemySpawn"
                         }],
                  "rotation":0,
                  "type":"",
@@ -125,24 +143,6 @@
                  "width":0,
                  "x":344,
                  "y":64
-                }, 
-                {
-                 "height":0,
-                 "id":7,
-                 "name":"",
-                 "point":true,
-                 "properties":[
-                        {
-                         "name":"function",
-                         "type":"string",
-                         "value":"createZombieSpawn"
-                        }],
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":8,
-                 "y":128
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -151,7 +151,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":8,
+ "nextobjectid":14,
  "orientation":"orthogonal",
  "properties":[
         {

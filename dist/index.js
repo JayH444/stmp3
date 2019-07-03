@@ -115,7 +115,7 @@ function loadingPreload() {  // Loads game assets.
 
   //Images and sound effects:
   let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/assets');
+  let files = fs.readdirSync('./root/dist/assets');
   for (let file of files) {
     // Loop for loading the images in the assets directory.
     // Automatically names them.
@@ -143,7 +143,7 @@ function loadingPreload() {  // Loads game assets.
   );
 
   // Sound effect loader:
-  files = fs.readdirSync('../dev/root/dist/sfx');
+  files = fs.readdirSync('./root/dist/sfx');
   for (let file of files) {
     // Loop for loading the sounds in the sfx directory.
     // Automatically names them.
@@ -492,6 +492,7 @@ function titleCreate() {
   parentThis = this;
 
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
+  let signature = this.add.image(config.width-16, config.height-7, 'signature');
   
   window.validMenuPositions = [];
 
@@ -681,7 +682,7 @@ function destroyText(textId) {
 //- src\components\enemyManager.js -///////////////////////////////////////////
 
 class EnemyManagerClass {
-  constructor(enemyCountMinimum=15, enemyCountRange=15) {
+  constructor(enemyCountMinimum=12, enemyCountRange=13) {
     let ecm = enemyCountMinimum;
     let ecr = enemyCountRange;
     this.initialEnemyCount = Math.floor(Math.random()*ecr + ecm);
@@ -762,7 +763,7 @@ function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder, and
   // returns an array of the keys for the levels.
   let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/levels');
+  let files = fs.readdirSync('./root/dist/levels');
   let res = [];
   for (let file of files) {
     // fileKey is basically the file name:
@@ -838,11 +839,11 @@ function getValidGrassSpawnAreas() {
 class Actor extends Phaser.Physics.Arcade.Sprite {
   // Constructor function "class" for creating an actor 
   // and its general methods and properties.
-  constructor(scene, x, y, texture, speed, name=texture, collideWB=true) {
+  constructor(scene, x, y, texture, speed, name=texture, animPlaySpeed=speed) {
     super(scene, x, y, texture);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setCollideWorldBounds(collideWB);
+    this.setCollideWorldBounds(true);
     this.name = name;
     this.body.setGravity(0, 500);
     this.body.setSize(8, 16);
@@ -857,8 +858,9 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
     this.destroyed = false;
     // Invulnerability period after getting hit (in ms):
     this.invulPeriod = 1500;
-    // Animation speed scales with actor's movement speed:
-    this.animSpeed = parseInt(0.09375 * this.speed);
+    // Animation speed scales with actor's movement speed,
+    // OR with a predefined value:
+    this.animSpeed = parseInt(0.09375 * animPlaySpeed);
     parentThis.physics.add.collider(this, platforms);
 
     // Methods:
@@ -926,10 +928,44 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
     this.playSoundPunch = () => {
       parentThis.sound.play('punch1');
     }
+
+    this.getHitByProjectile = (target, projectile) => {
+      if (!target.invul && target.alive) {
+        // target can't get hit if it is invulnerable
+        target.setVelocityY(-150);
+        if (!target.stunned) {
+          // Stuns target so they can't move and don't take further damage.
+          this.playSoundPunch();
+          target.decrementHealth();
+        }
+        target.stun(200, true);
+        let velocity = 100;
+        if (target.body.velocity.x < 0) {
+          // target is moving left...
+          target.body.velocity.x = velocity;
+        }
+        else if (target.body.velocity.x > 0) {
+          // target is moving right...
+          target.body.velocity.x = -velocity;
+        }
+        else {
+          // e.g. if target is standing still
+          // and the projectile hits it.
+          let dir = (projectile.body.velocity.x > 0) ? velocity : -velocity;
+          target.body.velocity.x = dir;
+        }
+        if (target.health <= 0) {
+          target.body.velocity.x *= -1;
+          target.die();
+        }
+      }
+      projectile.destroy();
+    }
   
     this.getHit = (target1, target2) => {
       // Function that executes when collision 
       // between target1 and target2 occurs.
+      if (!target1.alive || !target2.alive) return;
       if (target2.body.touching.up) {
         // target1 is above target2 (headstomp)
         this.playSoundPunch();
@@ -1021,29 +1057,104 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
 ///////////////////////////////////////////////////////////////////////////////
 
 
+//- src\actors\enemyActor.js -/////////////////////////////////////////////////
+
+class enemyActor extends Actor {
+  // Creates a acidBug.
+  constructor(scene, x, y, texture, speed, animSpeed=speed) {
+    let superArgs = [
+      scene, x, y,
+      texture,
+      speed,
+      texture,  // Name is the same as texture.
+      animSpeed
+    ];
+    super(...superArgs);
+
+    // All enemies don't collide with world bounds:
+    this.setCollideWorldBounds(false);
+    
+    this.getHitByPunch = (target1, punchObject) => {
+      // When a zombie gets hit, e.g. by a punch.
+      target1.stun(400);
+      target1.setVelocityY(-150);
+      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
+      target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
+      punchObject.destroy();
+      parentThis.physics.world.removeCollider(this.collider);
+      parentThis.physics.world.removeCollider(this.punchCollider);
+      target1.die();
+      player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
+      player.addKill();
+    }
+
+    // Adding punch collision:
+    this.punchboxArgs = [
+      this, punchboxes, this.getHitByPunch, null, parentThis
+    ];
+    this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
+    
+    // Player collision stuff:
+    this.collisionArgs = [player, this, player.getHit, null, this]
+    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\actors\acidBugActor.js -///////////////////////////////////////////////
 
-class AcidBug extends Actor {
+class AcidBug extends enemyActor {
   // Creates a acidBug.
   constructor(scene, x, y) {
+    // Movement speed randomizer:
+    let speed = 80 * (1 + (Math.random() - 0.5) / 7)
     let superArgs = [
       scene, x, y,
       'acidBug',
-      80 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
-      'acidBug',  // Name is the same as texture.
-      false,  // Doesn't collide with world bounds.
+      speed,
+      speed*2, // Animations should be fairly fast.
     ];
     super(...superArgs);
+    this.body.setSize(16, 11);
+    this.body.setOffset(0, 5);
     this.standingAtTarget = false;
     this.nodeTouched = false;
     this.chasing = false;
-    this.animSpeed *= 3;
     this.seesTarget = false;
     this.wandering = true;
     let losArgs = [this.x, this.y, (this.flipX) ? 0 : config.width, this.y];
     this.lineOfSight = new Phaser.Geom.Line(...losArgs);
 
     // -- AcidBug AI stuff -- //
+
+    this.canSpit = true;
+    this.spitAcid = () => {
+      if (this.canSpit && this.alive) {
+        parentThis.sound.play('spit');
+        let xPos = (this.flipX) ? this.x - 2 : this.x + 2;
+        let acidBall = parentThis.physics.add.image(xPos, this.y+2, 'acid');
+        acidBall.setSize(4, 4);
+        acidBall.targetArgs = [
+          player, acidBall, player.getHitByProjectile, null, parentThis
+        ];
+        parentThis.physics.add.overlap(...acidBall.targetArgs);
+        let collideArgs = [acidBall, platforms, () => acidBall.destroy()];
+        parentThis.physics.add.collider(...collideArgs);
+        acidBall.setVelocityX(((this.flipX) ? -speed : speed) * 3);
+        acidBall.setVelocityY(-50);
+        this.canSpit = false;
+        parentThis.time.delayedCall(2000, () => this.canSpit = true);
+      }
+      parentThis.time.delayedCall(200, () => this.stunned = false);
+    }
+    
+    this.spitAttack = () => {
+      this.goIdle();
+      this.stunned = true;
+      parentThis.time.delayedCall(500, () => this.spitAcid());
+    }
 
     this.lastx = this.x;
     this.updateLastX = () => {
@@ -1057,7 +1168,7 @@ class AcidBug extends Actor {
       wanderDirection = Boolean(Phaser.Math.Between(0, 1));
     }
     this.wanderTimerArgs = {
-      delay: 2000, callback: this.newWanderDir, repeat: -1
+      delay: 1000, callback: this.newWanderDir, repeat: -1
     };
     this.wanderTimer = parentThis.time.addEvent(this.wanderTimerArgs);
 
@@ -1066,7 +1177,7 @@ class AcidBug extends Actor {
       this.wandering = true;
       let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
       //let validMovementRange = this.x > this.width;
-      if (this.wanderTimer.elapsed < 1700) {
+      if (this.wanderTimer.elapsed < 700) {
         if (this.x <= this.width/2 - 2) {
           wanderDirection = false;
         }
@@ -1124,13 +1235,26 @@ class AcidBug extends Actor {
             target.alive
           );
           // Movement conditionals, ignored if noTarget is enabled:
+          let pastLeftBorder = this.x > this.width/2 - 2
+          let pastRightBorder = this.x < config.width - this.width/2 + 2;
+          let onScreen = pastLeftBorder && pastRightBorder;
           if (this.seesPlayerLeft && !noTarget) {
-            this.go(-this.speed);
+            if (Math.abs(this.x - target.x) <= 64 && onScreen) {
+              this.spitAttack();
+            }
+            else {
+              this.go(-this.speed);
+            }
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
             parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else if (this.seesPlayerRight && !noTarget) {
-            this.go(this.speed);
+            if (Math.abs(this.x - target.x) <= 64 && onScreen) {
+              this.spitAttack();
+            }
+            else {
+              this.go(this.speed);
+            }
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
             parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
@@ -1159,28 +1283,6 @@ class AcidBug extends Actor {
     }
 
     // -- End Acid bug AI -- //
-
-    parentThis.physics.add.collider(this, platforms);
-    this.getHit = (target1, punchObject) => {
-      // When a acidBug gets hit, e.g. by a punch.
-      target1.stun(400);
-      target1.setVelocityY(-150);
-      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
-      target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
-      punchObject.destroy();
-      parentThis.physics.world.removeCollider(this.collider);
-      parentThis.physics.world.removeCollider(this.punchCollider);
-      target1.die();
-      player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
-      player.addKill();
-    }
-    // Adding punch collision:
-    this.punchboxArgs = [this, punchboxes, this.getHit, null, parentThis];
-    this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
-    
-    // Player collision stuff:
-    this.collisionArgs = [player, this, player.getHit, null, this]
-    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
     
     this.changeDir = (buggeh, node) => {
       if (this.wandering && this.body.blocked.down) {
@@ -1234,19 +1336,12 @@ class Bat extends Actor {
 ///////////////////////////////////////////////////////////////////////////////
 
 
-//- src\actors\enemyActor.js -/////////////////////////////////////////////////
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-
 //- src\actors\playerActor.js -////////////////////////////////////////////////
 
 class Player extends Actor {
   // Creates a this.
   constructor(scene, x, y, texture, speed, name=texture) {
-    super(scene, x, y, texture, speed, name, true);
+    super(scene, x, y, texture, speed, name);
     this.score = 0;
     this.kills = 0;
     this.holdingJump = false;
@@ -1317,11 +1412,11 @@ class Player extends Actor {
       this.isPunching = true;
       this.punchAnimPlay = true;
       this.punchCoolingDown = true;
-      parentThis.time.delayedCall(100, () => this.punchAnimPlay = false);
+      parentThis.time.delayedCall(150, () => this.punchAnimPlay = false);
       parentThis.time.delayedCall(200, () => this.punchCoolingDown = false);
       let CollisionX = (this.flipX) ? this.x - 10 : this.x + 10;
       let punchbox = punchboxes.create(CollisionX, this.y, 'punchbox');
-      parentThis.time.delayedCall(100, () => punchbox.destroy());
+      parentThis.time.delayedCall(150, () => punchbox.destroy());
     };
 
     this.update = () => {
@@ -1357,7 +1452,7 @@ class Player extends Actor {
         }
 
         if (cursors.a.isDown) {
-          if (!this.isPunching) {
+          if (!this.isPunching && !this.stunned) {
             this.punch();
           }
         }
@@ -1395,15 +1490,13 @@ class Player extends Actor {
 
 //- src\actors\zombieActor.js -////////////////////////////////////////////////
 
-class Zombie extends Actor {
+class Zombie extends enemyActor {
   // Creates a zombie.
   constructor(scene, x, y) {
     let superArgs = [
       scene, x, y,
       'zombie',
       40 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
-      'zombie',  // Name is the same as texture.
-      false,  // Doesn't collide with world bounds.
     ];
     super(...superArgs);
     this.standingAtTarget = false;
@@ -1532,26 +1625,6 @@ class Zombie extends Actor {
     // -- End zombie AI -- //
 
     parentThis.physics.add.collider(this, platforms);
-    this.getHit = (target1, punchObject) => {
-      // When a zombie gets hit, e.g. by a punch.
-      target1.stun(400);
-      target1.setVelocityY(-150);
-      let velocity = 250 + Math.abs(player.body.velocity.x)*1.5;
-      target1.body.velocity.x = (player.flipX) ? -velocity : velocity;
-      punchObject.destroy();
-      parentThis.physics.world.removeCollider(this.collider);
-      parentThis.physics.world.removeCollider(this.punchCollider);
-      target1.die();
-      player.addScore(100 + parseInt(Math.abs(player.body.velocity.x)/2));
-      player.addKill();
-    }
-    // Adding punch collision:
-    this.punchboxArgs = [this, punchboxes, this.getHit, null, parentThis];
-    this.punchCollider = parentThis.physics.add.overlap(...this.punchboxArgs);
-    
-    // Player collision stuff:
-    this.collisionArgs = [player, this, player.getHit, null, this]
-    this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
     
     this.changeDir = (zombeh, node) => {
       if (this.wandering && this.body.blocked.down) {

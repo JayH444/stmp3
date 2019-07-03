@@ -41,7 +41,7 @@ function loadingPreload() {  // Loads game assets.
 
   //Images and sound effects:
   let fs = require('fs');
-  let files = fs.readdirSync('../dev/root/dist/assets');
+  let files = fs.readdirSync('./root/dist/assets');
   for (let file of files) {
     // Loop for loading the images in the assets directory.
     // Automatically names them.
@@ -69,7 +69,7 @@ function loadingPreload() {  // Loads game assets.
   );
 
   // Sound effect loader:
-  files = fs.readdirSync('../dev/root/dist/sfx');
+  files = fs.readdirSync('./root/dist/sfx');
   for (let file of files) {
     // Loop for loading the sounds in the sfx directory.
     // Automatically names them.

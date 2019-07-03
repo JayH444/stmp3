@@ -1,7 +1,7 @@
 class Player extends Actor {
   // Creates a this.
   constructor(scene, x, y, texture, speed, name=texture) {
-    super(scene, x, y, texture, speed, name, true);
+    super(scene, x, y, texture, speed, name);
     this.score = 0;
     this.kills = 0;
     this.holdingJump = false;
@@ -72,11 +72,11 @@ class Player extends Actor {
       this.isPunching = true;
       this.punchAnimPlay = true;
       this.punchCoolingDown = true;
-      parentThis.time.delayedCall(100, () => this.punchAnimPlay = false);
+      parentThis.time.delayedCall(150, () => this.punchAnimPlay = false);
       parentThis.time.delayedCall(200, () => this.punchCoolingDown = false);
       let CollisionX = (this.flipX) ? this.x - 10 : this.x + 10;
       let punchbox = punchboxes.create(CollisionX, this.y, 'punchbox');
-      parentThis.time.delayedCall(100, () => punchbox.destroy());
+      parentThis.time.delayedCall(150, () => punchbox.destroy());
     };
 
     this.update = () => {
@@ -112,7 +112,7 @@ class Player extends Actor {
         }
 
         if (cursors.a.isDown) {
-          if (!this.isPunching) {
+          if (!this.isPunching && !this.stunned) {
             this.punch();
           }
         }

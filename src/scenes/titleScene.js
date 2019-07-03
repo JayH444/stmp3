@@ -16,6 +16,7 @@ function titleCreate() {
   parentThis = this;
 
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
+  let signature = this.add.image(config.width-16, config.height-7, 'signature');
   
   window.validMenuPositions = [];
 

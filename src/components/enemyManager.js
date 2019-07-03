@@ -1,5 +1,5 @@
 class EnemyManagerClass {
-  constructor(enemyCountMinimum=15, enemyCountRange=15) {
+  constructor(enemyCountMinimum=12, enemyCountRange=13) {
     let ecm = enemyCountMinimum;
     let ecr = enemyCountRange;
     this.initialEnemyCount = Math.floor(Math.random()*ecr + ecm);
