@@ -9,12 +9,14 @@ class mainScene extends Phaser.Scene {
   }
 }
 
+
 function preload() {
   parentThis = this;
   if (skipTitle) {
     currentLevel = (pickRandomLevel) ? randomLevel() : levels[levelNumber];
   }
 }
+
 
 function create() {
   parentThis = this;
@@ -92,7 +94,9 @@ function create() {
     let condB = totalEnemiesSpawned < gameEnemyManager.initialEnemyCount;
     if (enemiesAlive.length <= 9 && condB) {
       totalEnemiesSpawned++;
-      let options = [CreateRandomZombie, CreateRandomAcidBug];
+      let options = [
+        CreateRandomZombie, CreateRandomAcidBug, CreateRandomBat
+      ];
       return options[Math.floor(Math.random() * options.length)]();
     }
   }
@@ -184,13 +188,24 @@ function update() {
     enemySpawnTimer.paused = false;
   }
 
-  if (!player.alive && gameTimer.timeRemaining > 0) {  // Trigger game over.
+  if (!allowEnemySpawning) {
+    spawnEnemies = false;
+  }
+  if (pauseGameTimer) {
+    gameTimer.timerEvent.paused = true;
+  }
+
+  if (!player.alive && gameTimer.timeRemaining > 0 && !gameOverTriggered) {
+    // Trigger game over.
+    canPause = false;
     gameTimer.timerEvent.paused = true;
     totalScore = player.score;
+    console.log('Game over conditional triggered!');
     setTimeout(() => {
       parentThis.scene.launch('gameOverScene');
       parentThis.scene.stop('mainScene');
     }, 1500);
+    gameOverTriggered = true;
   }
 
   player.update();

@@ -12,7 +12,7 @@ class enemyActor extends Actor {
 
     // All enemies don't collide with world bounds:
     this.setCollideWorldBounds(false);
-    
+
     this.getHitByPunch = (target1, punchObject) => {
       // When a zombie gets hit, e.g. by a punch.
       target1.stun(400);
@@ -36,5 +36,13 @@ class enemyActor extends Actor {
     // Player collision stuff:
     this.collisionArgs = [player, this, player.getHit, null, this]
     this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
+    
+    // Edge detection and enemiesAlive array stuff:
+    this.edgeDetectorArgs = [
+      this, edgeNodes, this.changeDir, null, parentThis
+    ];
+    let edArgs = this.edgeDetectorArgs;
+    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
+    enemiesAlive.push(this);
   }
 }

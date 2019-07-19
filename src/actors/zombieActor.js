@@ -81,7 +81,7 @@ class Zombie extends enemyActor {
         delete this.lineOfSight;
       }
       if (this.alive && !this.stunned) {
-        if (noAI === false) { // Ignored if noAI is true.
+        if (noAI === false) {  // Ignored if noAI is true.
           // Stuff for when the zombies sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
@@ -131,8 +131,6 @@ class Zombie extends enemyActor {
     }
 
     // -- End zombie AI -- //
-
-    parentThis.physics.add.collider(this, platforms);
     
     this.changeDir = (zombeh, node) => {
       if (this.wandering && this.body.blocked.down) {
@@ -144,13 +142,6 @@ class Zombie extends enemyActor {
         }
       }
     }
-
-    this.edgeDetectorArgs = [
-      this, edgeNodes, this.changeDir, null, parentThis
-    ];
-    let edArgs = this.edgeDetectorArgs;
-    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
-    enemiesAlive.push(this);
   }
 }
 

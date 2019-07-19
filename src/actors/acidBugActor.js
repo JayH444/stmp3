@@ -1,11 +1,11 @@
 class AcidBug extends enemyActor {
-  // Creates a acidBug.
+  // Creates an acidBug.
   constructor(scene, x, y) {
     // Movement speed randomizer:
     let speed = 80 * (1 + (Math.random() - 0.5) / 7)
     let superArgs = [
       scene, x, y,
-      'acidBug',
+      'acidbug',
       speed,
       speed*2, // Animations should be fairly fast.
     ];
@@ -70,7 +70,7 @@ class AcidBug extends enemyActor {
       this.wandering = true;
       let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
       //let validMovementRange = this.x > this.width;
-      if (this.wanderTimer.elapsed < 700) {
+      if (this.wanderTimer.elapsed < 700) {  // Keeps the enemy on screen.
         if (this.x <= this.width/2 - 2) {
           wanderDirection = false;
         }
@@ -86,7 +86,7 @@ class AcidBug extends enemyActor {
     
     this.go = (speed) => {
       this.moveX(speed, this.drag);
-      this.anims.play('acidBugMove', true);
+      this.anims.play('acidbugMove', true);
       this.flipX = (speed < 0) ? true : false;
     }
     
@@ -113,7 +113,7 @@ class AcidBug extends enemyActor {
         delete this.lineOfSight;
       }
       if (this.alive && !this.stunned) {
-        if (noAI === false) { // Ignored if noAI is true.
+        if (noAI === false) {  // Ignored if noAI is true.
           // Stuff for when the acidBugs sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
@@ -187,13 +187,6 @@ class AcidBug extends enemyActor {
         }
       }
     }
-
-    this.edgeDetectorArgs = [
-      this, edgeNodes, this.changeDir, null, parentThis
-    ];
-    let edArgs = this.edgeDetectorArgs;
-    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
-    enemiesAlive.push(this);
   }
 }
 

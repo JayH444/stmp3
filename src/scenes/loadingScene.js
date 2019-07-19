@@ -46,27 +46,28 @@ function loadingPreload() {  // Loads game assets.
     // Loop for loading the images in the assets directory.
     // Automatically names them.
     // !!!Ignores files with a 'spritesheet_' prefix!!!
-    // Spritesheets need to be loaded manually.
-    let pattern = /(\w+)\.png/;
-    this.load.image(file.match(pattern)[1], 'assets/' + file);
+    // Spritesheets need to be loaded separately.
+    if (!/spritesheet/.test(file)) {
+      let pattern = /(\w+)\.png/;
+      this.load.image(file.match(pattern)[1], 'assets/' + file);
+    }
   }
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Acid bug spritesheet:
-  this.load.spritesheet('acidBug', 'assets/spritesheet_acidbug.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
 
   // Font spritesheet. Uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
     {frameWidth: 8, frameHeight: 8}
   );
+
+  // Loads and automatically names the spritesheets
+  for (let file of files) {
+    if (/spritesheet/.test(file) && !/font/.test(file)) {
+      console.log(file);
+      let pattern = /spritesheet_(\w+)/;
+      this.load.spritesheet(file.match(pattern)[1], 'assets/' + file,
+        {frameWidth: 16, frameHeight: 16}
+      );
+    }
+  }
 
   // Sound effect loader:
   files = fs.readdirSync('./root/dist/sfx');

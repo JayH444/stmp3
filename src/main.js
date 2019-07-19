@@ -37,6 +37,7 @@ let textObjects = {};  // Object for storing the displayed texts.
 let enemiesAlive = [];
 // Becomes true if a destroyed enemy is detected in the enemies array:
 let enemiesFilter = false;
+let spawnEnemies = true;
 
 let totalEnemiesSpawned = 0;
 let enemySpawnpoints = [];
@@ -44,12 +45,15 @@ let totalScore = 0;
 let currentLevel;
 let levelNumber = 0;
 let lastLevelHealth = 3;
+// Prevents the gameover conditional from executing more than once:
+let gameOverTriggered = false;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
-let spawnEnemies = true;
-let skipTitle = false;
+let skipTitle = true;
+let allowEnemySpawning = true;
+let pauseGameTimer = false;
 let showVisionRays = false;
 let pickRandomLevel = false;
 let canPause = true;

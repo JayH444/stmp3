@@ -142,5 +142,6 @@ class Player extends Actor {
         this.decayVelocityX(0.55);
       }
     };
+
   }
 }

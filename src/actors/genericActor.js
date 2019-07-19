@@ -41,16 +41,24 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       this.body.velocity.x = parseInt(this.body.velocity.x * decayRatio);
     }
 
-    this.moveX = (speed, inertia) => {
+    this.moveDir = (speed, inertia, dir) => {
       if (this.destroyed) return;
       if (!this.stunned) {
-        if (Math.abs(this.body.velocity.x) < Math.abs(speed)) {
-          this.body.velocity.x += (speed * inertia);
+        if (Math.abs(this.body.velocity[dir]) < Math.abs(speed)) {
+          this.body.velocity[dir] += (speed * inertia);
         }
         else {
-          this.body.velocity.x = speed;
+          this.body.velocity[dir] = speed;
         }
-      }
+      }      
+    }
+
+    this.moveX = (speed, inertia) => {
+      this.moveDir(speed, inertia, 'x');
+    }
+
+    this.moveY = (speed, inertia) => {
+      this.moveDir(speed, inertia, 'y');    
     }
 
     this.die = () => {
@@ -211,7 +219,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
         frameRate: 10
       });
     }
-
 
   }
 }

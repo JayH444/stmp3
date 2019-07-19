@@ -120,27 +120,28 @@ function loadingPreload() {  // Loads game assets.
     // Loop for loading the images in the assets directory.
     // Automatically names them.
     // !!!Ignores files with a 'spritesheet_' prefix!!!
-    // Spritesheets need to be loaded manually.
-    let pattern = /(\w+)\.png/;
-    this.load.image(file.match(pattern)[1], 'assets/' + file);
+    // Spritesheets need to be loaded separately.
+    if (!/spritesheet/.test(file)) {
+      let pattern = /(\w+)\.png/;
+      this.load.image(file.match(pattern)[1], 'assets/' + file);
+    }
   }
-  // Player spritesheet:
-  this.load.spritesheet('player', 'assets/spritesheet_dude.png', 
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Zombie spritesheet:
-  this.load.spritesheet('zombie', 'assets/spritesheet_zombie.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
-  // Acid bug spritesheet:
-  this.load.spritesheet('acidBug', 'assets/spritesheet_acidbug.png',
-    {frameWidth: 16, frameHeight: 16}
-  );
 
   // Font spritesheet. Uses ASCII values minus 32.
   this.load.spritesheet('fontmap', 'assets/spritesheet_font.png', 
     {frameWidth: 8, frameHeight: 8}
   );
+
+  // Loads and automatically names the spritesheets
+  for (let file of files) {
+    if (/spritesheet/.test(file) && !/font/.test(file)) {
+      console.log(file);
+      let pattern = /spritesheet_(\w+)/;
+      this.load.spritesheet(file.match(pattern)[1], 'assets/' + file,
+        {frameWidth: 16, frameHeight: 16}
+      );
+    }
+  }
 
   // Sound effect loader:
   files = fs.readdirSync('./root/dist/sfx');
@@ -206,12 +207,14 @@ class mainScene extends Phaser.Scene {
   }
 }
 
+
 function preload() {
   parentThis = this;
   if (skipTitle) {
     currentLevel = (pickRandomLevel) ? randomLevel() : levels[levelNumber];
   }
 }
+
 
 function create() {
   parentThis = this;
@@ -289,7 +292,9 @@ function create() {
     let condB = totalEnemiesSpawned < gameEnemyManager.initialEnemyCount;
     if (enemiesAlive.length <= 9 && condB) {
       totalEnemiesSpawned++;
-      let options = [CreateRandomZombie, CreateRandomAcidBug];
+      let options = [
+        CreateRandomZombie, CreateRandomAcidBug, CreateRandomBat
+      ];
       return options[Math.floor(Math.random() * options.length)]();
     }
   }
@@ -381,13 +386,24 @@ function update() {
     enemySpawnTimer.paused = false;
   }
 
-  if (!player.alive && gameTimer.timeRemaining > 0) {  // Trigger game over.
+  if (!allowEnemySpawning) {
+    spawnEnemies = false;
+  }
+  if (pauseGameTimer) {
+    gameTimer.timerEvent.paused = true;
+  }
+
+  if (!player.alive && gameTimer.timeRemaining > 0 && !gameOverTriggered) {
+    // Trigger game over.
+    canPause = false;
     gameTimer.timerEvent.paused = true;
     totalScore = player.score;
+    console.log('Game over conditional triggered!');
     setTimeout(() => {
       parentThis.scene.launch('gameOverScene');
       parentThis.scene.stop('mainScene');
     }, 1500);
+    gameOverTriggered = true;
   }
 
   player.update();
@@ -879,16 +895,24 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       this.body.velocity.x = parseInt(this.body.velocity.x * decayRatio);
     }
 
-    this.moveX = (speed, inertia) => {
+    this.moveDir = (speed, inertia, dir) => {
       if (this.destroyed) return;
       if (!this.stunned) {
-        if (Math.abs(this.body.velocity.x) < Math.abs(speed)) {
-          this.body.velocity.x += (speed * inertia);
+        if (Math.abs(this.body.velocity[dir]) < Math.abs(speed)) {
+          this.body.velocity[dir] += (speed * inertia);
         }
         else {
-          this.body.velocity.x = speed;
+          this.body.velocity[dir] = speed;
         }
-      }
+      }      
+    }
+
+    this.moveX = (speed, inertia) => {
+      this.moveDir(speed, inertia, 'x');
+    }
+
+    this.moveY = (speed, inertia) => {
+      this.moveDir(speed, inertia, 'y');    
     }
 
     this.die = () => {
@@ -1050,7 +1074,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
       });
     }
 
-
   }
 }
 
@@ -1073,7 +1096,7 @@ class enemyActor extends Actor {
 
     // All enemies don't collide with world bounds:
     this.setCollideWorldBounds(false);
-    
+
     this.getHitByPunch = (target1, punchObject) => {
       // When a zombie gets hit, e.g. by a punch.
       target1.stun(400);
@@ -1097,6 +1120,14 @@ class enemyActor extends Actor {
     // Player collision stuff:
     this.collisionArgs = [player, this, player.getHit, null, this]
     this.collider = parentThis.physics.add.overlap(...this.collisionArgs);
+    
+    // Edge detection and enemiesAlive array stuff:
+    this.edgeDetectorArgs = [
+      this, edgeNodes, this.changeDir, null, parentThis
+    ];
+    let edArgs = this.edgeDetectorArgs;
+    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
+    enemiesAlive.push(this);
   }
 }
 
@@ -1106,13 +1137,13 @@ class enemyActor extends Actor {
 //- src\actors\acidBugActor.js -///////////////////////////////////////////////
 
 class AcidBug extends enemyActor {
-  // Creates a acidBug.
+  // Creates an acidBug.
   constructor(scene, x, y) {
     // Movement speed randomizer:
     let speed = 80 * (1 + (Math.random() - 0.5) / 7)
     let superArgs = [
       scene, x, y,
-      'acidBug',
+      'acidbug',
       speed,
       speed*2, // Animations should be fairly fast.
     ];
@@ -1177,7 +1208,7 @@ class AcidBug extends enemyActor {
       this.wandering = true;
       let movementSpeed = (wanderDirection) ? -this.speed : this.speed;
       //let validMovementRange = this.x > this.width;
-      if (this.wanderTimer.elapsed < 700) {
+      if (this.wanderTimer.elapsed < 700) {  // Keeps the enemy on screen.
         if (this.x <= this.width/2 - 2) {
           wanderDirection = false;
         }
@@ -1193,7 +1224,7 @@ class AcidBug extends enemyActor {
     
     this.go = (speed) => {
       this.moveX(speed, this.drag);
-      this.anims.play('acidBugMove', true);
+      this.anims.play('acidbugMove', true);
       this.flipX = (speed < 0) ? true : false;
     }
     
@@ -1220,7 +1251,7 @@ class AcidBug extends enemyActor {
         delete this.lineOfSight;
       }
       if (this.alive && !this.stunned) {
-        if (noAI === false) { // Ignored if noAI is true.
+        if (noAI === false) {  // Ignored if noAI is true.
           // Stuff for when the acidBugs sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
@@ -1294,13 +1325,6 @@ class AcidBug extends enemyActor {
         }
       }
     }
-
-    this.edgeDetectorArgs = [
-      this, edgeNodes, this.changeDir, null, parentThis
-    ];
-    let edArgs = this.edgeDetectorArgs;
-    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
-    enemiesAlive.push(this);
   }
 }
 
@@ -1316,22 +1340,172 @@ function CreateRandomAcidBug() {
 
 //- src\actors\batActor.js -///////////////////////////////////////////////////
 
-class Bat extends Actor {
+class Bat extends enemyActor {
+  // Creates a bat.
   constructor(scene, x, y) {
+    // Movement speed randomizer:
+    let speed = 40 * (1 + (Math.random() - 0.5) / 7);
     let superArgs = [
       scene, x, y,
       'bat',
-      60 * (1 + (Math.random() - 0.5) / 7),  // Movement speed randomizer.
-      'bat',  // Name is the same as texture.
-      false,  // Doesn't collide with world bounds.
+      speed,
+      speed*3,  // Bat wings flap pretty quickly!
     ];
     super(...superArgs);
-    
+
+    this.body.setGravity(0, -500);
+    this.body.setSize(8, 8);
+    let losArgs = [this.x, this.y, (this.flipX) ? 0 : config.width, this.y];
+    this.lineOfSight = new Phaser.Geom.Line(...losArgs);
+    this.magnitude = speed;
+    this.changeFlightDirection = true;
+    this.flightDirection = 0;
+
+    this.goIdle = (arg) => {
+      this.body.velocity.y = 0;
+      this.body.velocity.x = 0;
+      this.anims.play('batMove', true);
+    };
+
+    this.decayVelocityY = (arg=0.5) => {  // Actor velocity decay from drag.
+      if (this.destroyed) return;
+      let decayRatio = arg;
+      if (!this.body.blocked.down) {
+        decayRatio *= 1.75;
+      }
+      this.body.velocity.y = parseInt(this.body.velocity.y * decayRatio);
+    }
+
+    this.castVisionRay = () => {
+      if (this.alive) {
+        // This controls the bat's LoS raycast.
+        let flipTernary = (this.flipX) ? 0 : config.width;
+        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
+        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
+        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
+          // If the bat is facing left, then the tiles within the line 
+          // should be iterated right-to-left instead of left-to-right.
+          let tile = tilesWithinShape[i];
+          if (tile.collides) {
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+            break;
+          }
+          (this.flipX) ? i-- : i++;
+        }
+      }
+      else {
+        delete this.lineOfSight;
+      }
+    };
+
+    this.wander = () => {
+      if (this.changeFlightDirection) {
+        this.flightDirection = Phaser.Math.FloatBetween(0, Math.PI*2);
+        // Direction is 0 to 2*pi radians or 0 to 360 degrees.
+        this.changeFlightDirection = false;
+        let cb = () => this.changeFlightDirection = true;
+        parentThis.time.delayedCall(500, cb);
+      }
+      if (this.x <= this.width/2 - 2) {
+        // If the bat is offscreen to the left...
+        this.flightDirection = 0;  // Zero radians = moving right.
+      }
+      else if (this.x >= config.width - this.width/2 + 2) {
+        // or offscreen to the right...
+        this.flightDirection = Math.PI;  // Pi radians = moving left.
+      }
+      this.moveInDirection(this.flightDirection);      
+    };
+
+    this.moveInDirection = (dir, coeff=1) => {
+      // Makes the bat move in the given direction in radians.
+      // coeff is for increasing the magnitude of the movement.
+      let speedX = this.magnitude * Math.cos(dir);  // X component
+      let speedY = -this.magnitude * Math.sin(dir);  // Y component
+      this.flipX = speedX < 0;
+      this.moveX(coeff * speedX, this.drag);
+      this.moveY(coeff * speedY, this.drag);
+      //console.log(speedX + ', ' + speedY);
+    };
+
+    this.move = (target) => {
+      this.castVisionRay();
+      if (this.alive) {
+        if (noAI === false) {  // Ignored if noAI is true.
+          this.seesPlayerRight = (
+            (this.x < target.x && !this.flipX) &&
+            this.lineOfSight.x2 >= target.x &&
+            Math.abs(this.y - target.y) <= 64 &&
+            target.alive
+          );
+          this.seesPlayerLeft = (
+            (this.x > target.x && this.flipX) &&
+            this.lineOfSight.x2 <= target.x &&
+            Math.abs(this.y - target.y) <= 64 &&
+            target.alive
+          );
+          if (this.seesPlayerLeft || this.seesPlayerRight) {
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            // After making the raycast lock on the player, check if there's
+            // any blocks obstructing the path:
+            let LoScheck = map.getTilesWithinShape(this.lineOfSight);
+            if (LoScheck.filter(x => x.collides).length > 0) {
+              this.seesPlayerLeft = false;
+              this.seesPlayerRight = false;
+              this.castVisionRay();
+              parentThis.graphics.lineStyle(1, 0xFF0000, 1);
+            }
+            else {
+              parentThis.graphics.lineStyle(2, 0x00FF00, 1);
+            }
+          }
+          
+          this.seesPlayer = this.seesPlayerLeft || this.seesPlayerRight;
+          if (this.seesPlayer) {
+            // This basically uses a vector to get 
+            // the correct X and Y movement speeds.
+            let diffY = (-1 * (target.y - this.y));
+            let diffX = target.x - this.x;
+            let direction = Math.atan2(diffY, diffX);
+            let dirDeg = direction;
+            //console.log(`The player is at ${dirDeg * 180 / Math.PI} degrees relative to me!`);
+            this.moveInDirection(direction, 1.5);
+          }
+          else {
+            this.wander();
+          }
+
+        }
+        else {
+          this.goIdle();
+        }
+        this.anims.play('batMove', true);
+      }
+      else {
+        if (this.body.collideWorldBounds) {
+          this.setCollideWorldBounds(false);
+        }
+        if (this.body.height != 16) {
+          this.body.setSize(8, 16);
+        }
+        if (this.body.gravity.y === -500) {
+          this.body.setGravity(0, 500);
+        }
+        this.decayVelocityX(0.55);
+      }
+    };
+
   }
 }
 
-// Like the zombie, the bat is going to need some kind of ID system.
-// It would be best to make that some kind of part of the general enemy actor class.
+function CreateRandomBat() {
+  let randomSpawn = parseInt(Math.random() * enemySpawnpoints.length);
+  let x = enemySpawnpoints[randomSpawn][0];
+  let y = enemySpawnpoints[randomSpawn][1];
+  new Bat(parentThis, x, y);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1482,6 +1656,7 @@ class Player extends Actor {
         this.decayVelocityX(0.55);
       }
     };
+
   }
 }
 
@@ -1573,7 +1748,7 @@ class Zombie extends enemyActor {
         delete this.lineOfSight;
       }
       if (this.alive && !this.stunned) {
-        if (noAI === false) { // Ignored if noAI is true.
+        if (noAI === false) {  // Ignored if noAI is true.
           // Stuff for when the zombies sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
@@ -1623,8 +1798,6 @@ class Zombie extends enemyActor {
     }
 
     // -- End zombie AI -- //
-
-    parentThis.physics.add.collider(this, platforms);
     
     this.changeDir = (zombeh, node) => {
       if (this.wandering && this.body.blocked.down) {
@@ -1636,13 +1809,6 @@ class Zombie extends enemyActor {
         }
       }
     }
-
-    this.edgeDetectorArgs = [
-      this, edgeNodes, this.changeDir, null, parentThis
-    ];
-    let edArgs = this.edgeDetectorArgs;
-    this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
-    enemiesAlive.push(this);
   }
 }
 
@@ -1741,6 +1907,7 @@ let textObjects = {};  // Object for storing the displayed texts.
 let enemiesAlive = [];
 // Becomes true if a destroyed enemy is detected in the enemies array:
 let enemiesFilter = false;
+let spawnEnemies = true;
 
 let totalEnemiesSpawned = 0;
 let enemySpawnpoints = [];
@@ -1748,12 +1915,15 @@ let totalScore = 0;
 let currentLevel;
 let levelNumber = 0;
 let lastLevelHealth = 3;
+// Prevents the gameover conditional from executing more than once:
+let gameOverTriggered = false;
 
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
-let spawnEnemies = true;
-let skipTitle = false;
+let skipTitle = true;
+let allowEnemySpawning = true;
+let pauseGameTimer = false;
 let showVisionRays = false;
 let pickRandomLevel = false;
 let canPause = true;
