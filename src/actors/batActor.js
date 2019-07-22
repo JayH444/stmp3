@@ -17,7 +17,8 @@ class Bat extends enemyActor {
     this.lineOfSight = new Phaser.Geom.Line(...losArgs);
     this.magnitude = speed;
     this.changeFlightDirection = true;
-    this.flightDirection = 0;
+    this.flightDirection = 0;  // In radians.
+    this.dodgeDirection = 0;  // Ditto.
 
     this.goIdle = (arg) => {
       this.body.velocity.y = 0;
@@ -77,6 +78,26 @@ class Bat extends enemyActor {
       this.moveInDirection(this.flightDirection);      
     };
 
+    this.dodge = (target) => {
+      // Makes the bat dodge.
+      let targetVel = target.body.velocity.x;
+      if (targetVel == 0) {
+        if (target.x >= this.x) {
+          this.dodgeDirection = Math.PI;
+        }
+        else {
+          this.dodgeDirection = 0;
+        }
+      }
+      else if (targetVel > 0) {
+        this.dodgeDirection = Math.PI;
+      }
+      else {
+        this.dodgeDirection = 0;
+      }
+      this.moveInDirection(this.dodgeDirection, 3);      
+    };
+
     this.moveInDirection = (dir, coeff=1) => {
       // Makes the bat move in the given direction in radians.
       // coeff is for increasing the magnitude of the movement.
@@ -121,7 +142,21 @@ class Bat extends enemyActor {
           }
           
           this.seesPlayer = this.seesPlayerLeft || this.seesPlayerRight;
-          if (this.seesPlayer) {
+
+          let inHeadStompDanger = (
+            target.y > this.y - 64 &&
+            target.y < this.y &&
+            !target.body.blocked.down &&
+            Math.abs(target.x - this.x) < 24 &&
+            target.body.velocity.y > 0
+          );
+
+          if (inHeadStompDanger) {  // Dodge if about to get stomped.
+            // *chuckles*
+            // i'm in danger!
+            this.dodge(target);
+          }
+          else if (this.seesPlayer) {
             // This basically uses a vector to get 
             // the correct X and Y movement speeds.
             let diffY = (-1 * (target.y - this.y));

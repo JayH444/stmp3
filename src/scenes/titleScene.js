@@ -21,19 +21,23 @@ function titleCreate() {
   window.validMenuPositions = [];
 
   function addMenuOption(str, id, x, y) {
+    // Adds a menu option to the valid menu positions array.
     validMenuPositions.push([y, id]);
     printText(str, x, y, id);
   }
 
   function addMenuOptionCenterX(str, id, y) {
+    // Adds a centered menu option to the valid menu positions array.
     validMenuPositions.push([y, id]);
     printTextCenter(str, id, y);
   }
 
   let playText = 'Play';
+  let optionText = 'Options';
   let quitText = 'Quit';
   addMenuOptionCenterX(playText, 'playText', centerY - 4);
-  addMenuOptionCenterX(quitText, 'quitText', centerY + 12);
+  addMenuOptionCenterX(optionText, 'optionsText', centerY + 12);
+  addMenuOptionCenterX(quitText, 'quitText', centerY + 28);
 
   let menuCursorArgs = [
     textObjects['playText'][0].x-10, textObjects['playText'][0].y, 'menuCursor'
@@ -44,6 +48,10 @@ function titleCreate() {
   window.menuFunctions = {
     playText: () => {
       parentThis.scene.launch('levelIntroScene');
+      parentThis.scene.stop('titleScene');
+    },
+    optionsText: () => {
+      parentThis.scene.launch('optionsMenuScene');
       parentThis.scene.stop('titleScene');
     },
     quitText: () => {
@@ -70,12 +78,14 @@ function titleUpdate() {
     if (menuCursor.position + 1 < validMenuPositions.length) {
       menuCursor.position++;
       menuCursor.y = validMenuPositions[menuCursor.position][0];
+      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
     }
   }
   else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
     if (menuCursor.position - 1 > -1) {
       menuCursor.position--
       menuCursor.y = validMenuPositions[menuCursor.position][0];
+      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
     }
   }
   if (Phaser.Input.Keyboard.JustDown(cursors.start) || Phaser.Input.Keyboard.JustDown(cursors.a)) {

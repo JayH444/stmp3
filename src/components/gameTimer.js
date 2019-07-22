@@ -3,13 +3,13 @@ class gameTimerClass {
   // enemyManager is passed in as the argument to keep track of the number of
   // enemies alive, which is used for the timer's win/lose state.
   constructor(enemyManager) {
-    this.timeRemaining = 90;
+    this.timeRemaining = 150;
     this.timerEvent;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
     this.resetTime = () => {
-      this.timeRemaining = 90;
+      this.timeRemaining = 150;
     };
     this.tickTimer = () => {
       if (enemyManager.currentEnemyCount > 0) {

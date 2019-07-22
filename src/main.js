@@ -12,7 +12,7 @@ let config = {
   },
   scene: [
     loadingScene, titleScene, levelIntroScene,
-    mainScene, pausedScene, gameOverScene
+    mainScene, pausedScene, optionsMenuScene, gameOverScene
   ]
 };
 
@@ -51,7 +51,7 @@ let gameOverTriggered = false;
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
-let skipTitle = true;
+let skipTitle = false;
 let allowEnemySpawning = true;
 let pauseGameTimer = false;
 let showVisionRays = false;
@@ -64,7 +64,7 @@ const game = new Phaser.Game(config);
 
 function debuggingMenu() {
   // Constructor for creating a debug menu.
-  let dbMenu = document.getElementById("debug-menu"); 
+  let dbMenu = document.getElementById("debug-menu");
   this.getPlayerPos = () => {
     dbMenu.children[0].innerHTML = 'Player X: ' + Math.round(player.x*10)/10;
     dbMenu.children[1].innerHTML = 'Player Y: ' + Math.round(player.y*10)/10;

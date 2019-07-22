@@ -437,6 +437,39 @@ function update() {
 ///////////////////////////////////////////////////////////////////////////////
 
 
+//- src\scenes\optionsMenuScene.js -///////////////////////////////////////////
+
+// Options menu scene.
+
+class optionsMenuScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'optionsMenuScene'});
+    this.preload = optionsMenuPreload;
+    this.create = optionsMenuCreate;
+    this.update = optionsMenuUpdate;
+  }
+}
+
+function optionsMenuPreload() {
+  parentThis = this;
+}
+
+function optionsMenuCreate() {
+  parentThis = this;
+  printTextCenter('Hello!', 'thingie');
+  setTimeout(() => {
+    parentThis.scene.launch('titleScene');
+    parentThis.scene.stop('optionsMenuScene');    
+  }, 3000);
+}
+
+function optionsMenuUpdate() {
+  parentThis = this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\scenes\pausedScene.js -////////////////////////////////////////////////
 
 // Scene for when the game is paused.
@@ -513,19 +546,23 @@ function titleCreate() {
   window.validMenuPositions = [];
 
   function addMenuOption(str, id, x, y) {
+    // Adds a menu option to the valid menu positions array.
     validMenuPositions.push([y, id]);
     printText(str, x, y, id);
   }
 
   function addMenuOptionCenterX(str, id, y) {
+    // Adds a centered menu option to the valid menu positions array.
     validMenuPositions.push([y, id]);
     printTextCenter(str, id, y);
   }
 
   let playText = 'Play';
+  let optionText = 'Options';
   let quitText = 'Quit';
   addMenuOptionCenterX(playText, 'playText', centerY - 4);
-  addMenuOptionCenterX(quitText, 'quitText', centerY + 12);
+  addMenuOptionCenterX(optionText, 'optionsText', centerY + 12);
+  addMenuOptionCenterX(quitText, 'quitText', centerY + 28);
 
   let menuCursorArgs = [
     textObjects['playText'][0].x-10, textObjects['playText'][0].y, 'menuCursor'
@@ -536,6 +573,10 @@ function titleCreate() {
   window.menuFunctions = {
     playText: () => {
       parentThis.scene.launch('levelIntroScene');
+      parentThis.scene.stop('titleScene');
+    },
+    optionsText: () => {
+      parentThis.scene.launch('optionsMenuScene');
       parentThis.scene.stop('titleScene');
     },
     quitText: () => {
@@ -562,12 +603,14 @@ function titleUpdate() {
     if (menuCursor.position + 1 < validMenuPositions.length) {
       menuCursor.position++;
       menuCursor.y = validMenuPositions[menuCursor.position][0];
+      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
     }
   }
   else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
     if (menuCursor.position - 1 > -1) {
       menuCursor.position--
       menuCursor.y = validMenuPositions[menuCursor.position][0];
+      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
     }
   }
   if (Phaser.Input.Keyboard.JustDown(cursors.start) || Phaser.Input.Keyboard.JustDown(cursors.a)) {
@@ -727,13 +770,13 @@ class gameTimerClass {
   // enemyManager is passed in as the argument to keep track of the number of
   // enemies alive, which is used for the timer's win/lose state.
   constructor(enemyManager) {
-    this.timeRemaining = 90;
+    this.timeRemaining = 150;
     this.timerEvent;
     this.getTimeRemaining = () => {
       return this.timeRemaining.toString().padStart(3, '0');
     };
     this.resetTime = () => {
-      this.timeRemaining = 90;
+      this.timeRemaining = 150;
     };
     this.tickTimer = () => {
       if (enemyManager.currentEnemyCount > 0) {
@@ -1359,7 +1402,8 @@ class Bat extends enemyActor {
     this.lineOfSight = new Phaser.Geom.Line(...losArgs);
     this.magnitude = speed;
     this.changeFlightDirection = true;
-    this.flightDirection = 0;
+    this.flightDirection = 0;  // In radians.
+    this.dodgeDirection = 0;  // Ditto.
 
     this.goIdle = (arg) => {
       this.body.velocity.y = 0;
@@ -1419,6 +1463,26 @@ class Bat extends enemyActor {
       this.moveInDirection(this.flightDirection);      
     };
 
+    this.dodge = (target) => {
+      // Makes the bat dodge.
+      let targetVel = target.body.velocity.x;
+      if (targetVel == 0) {
+        if (target.x >= this.x) {
+          this.dodgeDirection = Math.PI;
+        }
+        else {
+          this.dodgeDirection = 0;
+        }
+      }
+      else if (targetVel > 0) {
+        this.dodgeDirection = Math.PI;
+      }
+      else {
+        this.dodgeDirection = 0;
+      }
+      this.moveInDirection(this.dodgeDirection, 3);      
+    };
+
     this.moveInDirection = (dir, coeff=1) => {
       // Makes the bat move in the given direction in radians.
       // coeff is for increasing the magnitude of the movement.
@@ -1463,7 +1527,21 @@ class Bat extends enemyActor {
           }
           
           this.seesPlayer = this.seesPlayerLeft || this.seesPlayerRight;
-          if (this.seesPlayer) {
+
+          let inHeadStompDanger = (
+            target.y > this.y - 64 &&
+            target.y < this.y &&
+            !target.body.blocked.down &&
+            Math.abs(target.x - this.x) < 24 &&
+            target.body.velocity.y > 0
+          );
+
+          if (inHeadStompDanger) {  // Dodge if about to get stomped.
+            // *chuckles*
+            // i'm in danger!
+            this.dodge(target);
+          }
+          else if (this.seesPlayer) {
             // This basically uses a vector to get 
             // the correct X and Y movement speeds.
             let diffY = (-1 * (target.y - this.y));
@@ -1882,7 +1960,7 @@ let config = {
   },
   scene: [
     loadingScene, titleScene, levelIntroScene,
-    mainScene, pausedScene, gameOverScene
+    mainScene, pausedScene, optionsMenuScene, gameOverScene
   ]
 };
 
@@ -1921,7 +1999,7 @@ let gameOverTriggered = false;
 // Booleans for toggling features (or cheating lol):
 let noAI = false;
 let noTarget = false;
-let skipTitle = true;
+let skipTitle = false;
 let allowEnemySpawning = true;
 let pauseGameTimer = false;
 let showVisionRays = false;
@@ -1934,7 +2012,7 @@ const game = new Phaser.Game(config);
 
 function debuggingMenu() {
   // Constructor for creating a debug menu.
-  let dbMenu = document.getElementById("debug-menu"); 
+  let dbMenu = document.getElementById("debug-menu");
   this.getPlayerPos = () => {
     dbMenu.children[0].innerHTML = 'Player X: ' + Math.round(player.x*10)/10;
     dbMenu.children[1].innerHTML = 'Player Y: ' + Math.round(player.y*10)/10;
