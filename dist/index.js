@@ -456,15 +456,49 @@ function optionsMenuPreload() {
 
 function optionsMenuCreate() {
   parentThis = this;
-  printTextCenter('Hello!', 'thingie');
-  setTimeout(() => {
+  //printTextCenter('Hello!', 'thingie');
+
+  let playText = 'Play';
+  let playFunc = () => {
+    parentThis.scene.launch('levelIntroScene');
+    parentThis.scene.stop('optionsMenuScene');
+    destroyMenuElements()
+  };
+  let returnText = 'Return';
+  let returnFunc = () => {
     parentThis.scene.launch('titleScene');
-    parentThis.scene.stop('optionsMenuScene');    
-  }, 3000);
+    parentThis.scene.stop('optionsMenuScene');
+    destroyMenuElements()
+  };
+
+  addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 12);
+
+  let menuCursorArgs = [
+    parentThis,
+    textObjects[menuElements[0][1]][0].x-10,
+    textObjects[menuElements[0][1]][0].y,
+    'menuCursor',
+    menuElements
+  ];
+  window.menuCursor = new menuCursorClass(...menuCursorArgs);
+
+  // This creates the keybinds:
+  cursors = this.input.keyboard.addKeys({
+    up: Phaser.Input.Keyboard.KeyCodes.W,
+    down: Phaser.Input.Keyboard.KeyCodes.S,
+    left: Phaser.Input.Keyboard.KeyCodes.A,
+    right: Phaser.Input.Keyboard.KeyCodes.D,
+    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
+    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
+    p: Phaser.Input.Keyboard.KeyCodes.P,
+    start: Phaser.Input.Keyboard.KeyCodes.ENTER,
+  });
 }
 
 function optionsMenuUpdate() {
   parentThis = this;
+  menuCursor.update();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -542,47 +576,36 @@ function titleCreate() {
 
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
   let signature = this.add.image(config.width-16, config.height-7, 'signature');
-  
-  window.validMenuPositions = [];
-
-  function addMenuOption(str, id, x, y) {
-    // Adds a menu option to the valid menu positions array.
-    validMenuPositions.push([y, id]);
-    printText(str, x, y, id);
-  }
-
-  function addMenuOptionCenterX(str, id, y) {
-    // Adds a centered menu option to the valid menu positions array.
-    validMenuPositions.push([y, id]);
-    printTextCenter(str, id, y);
-  }
 
   let playText = 'Play';
+  let playFunc = () => {
+    parentThis.scene.launch('levelIntroScene');
+    parentThis.scene.stop('titleScene');
+    destroyMenuElements()
+  };
   let optionText = 'Options';
+  let optionsFunc = () => {
+    parentThis.scene.launch('optionsMenuScene');
+    parentThis.scene.stop('titleScene');
+    destroyMenuElements()
+  };
   let quitText = 'Quit';
-  addMenuOptionCenterX(playText, 'playText', centerY - 4);
-  addMenuOptionCenterX(optionText, 'optionsText', centerY + 12);
-  addMenuOptionCenterX(quitText, 'quitText', centerY + 28);
+  let quitFunc = () => {
+    nw.App.quit();
+  };
+
+  addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX(optionText, optionsFunc, 'optionText', centerY + 12);
+  addMenuElementCenterX(quitText, quitFunc, 'quitText', centerY + 28);
 
   let menuCursorArgs = [
-    textObjects['playText'][0].x-10, textObjects['playText'][0].y, 'menuCursor'
+    parentThis,
+    textObjects[menuElements[0][1]][0].x-10,
+    textObjects[menuElements[0][1]][0].y,
+    'menuCursor',
+    menuElements
   ];
-  window.menuCursor = this.add.image(...menuCursorArgs);
-  menuCursor.position = 0;
-
-  window.menuFunctions = {
-    playText: () => {
-      parentThis.scene.launch('levelIntroScene');
-      parentThis.scene.stop('titleScene');
-    },
-    optionsText: () => {
-      parentThis.scene.launch('optionsMenuScene');
-      parentThis.scene.stop('titleScene');
-    },
-    quitText: () => {
-      nw.App.quit();
-    },
-  };
+  window.menuCursor = new menuCursorClass(...menuCursorArgs);
 
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
@@ -599,26 +622,7 @@ function titleCreate() {
 
 function titleUpdate() {
   parentThis = this;
-  if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-    if (menuCursor.position + 1 < validMenuPositions.length) {
-      menuCursor.position++;
-      menuCursor.y = validMenuPositions[menuCursor.position][0];
-      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
-    }
-  }
-  else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-    if (menuCursor.position - 1 > -1) {
-      menuCursor.position--
-      menuCursor.y = validMenuPositions[menuCursor.position][0];
-      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
-    }
-  }
-  if (Phaser.Input.Keyboard.JustDown(cursors.start) || Phaser.Input.Keyboard.JustDown(cursors.a)) {
-    let currKey = validMenuPositions[menuCursor.position][1];
-    if (menuFunctions.hasOwnProperty(currKey)) {
-      menuFunctions[currKey]();
-    }
-  }
+  menuCursor.update();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -663,6 +667,32 @@ function calculateDistance(target1x, target1y, target2x, target2y) {
 
 function pickRandomSprite(arr) {
   return Phaser.Math.RND.pick(arr);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\functions\menuElementFunctions.js -////////////////////////////////////
+
+function addMenuElement(str, func, id, x, y) {
+  // Adds a menu option to the valid menu positions array.
+  menuElements.push([y, id, func]);
+  printText(str, x, y, id);
+}
+
+function addMenuElementCenterX(str, func, id, y) {
+  // Adds a centered menu option to the valid menu positions array.
+  menuElements.push([y, id, func]);
+  printTextCenter(str, id, y);
+}
+
+function destroyMenuElements() {
+  // Destroys the contents of the menuElements array.
+  for (let element of menuElements) {
+    destroyText(element[1]);
+    element = null;
+  }
+  menuElements = [];
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -888,7 +918,43 @@ function getValidGrassSpawnAreas() {
 
 //- src\components\menuCursor.js -/////////////////////////////////////////////
 
+// Class and methods for the menu cursor.
 
+class menuCursorClass extends Phaser.GameObjects.Image {
+  constructor(scene, x, y, texture, menuElems, frame) {
+    super(scene, x, y, texture, frame);
+    this.position = 0;
+    this.update = () => {
+      let lastPos = this.position;
+      if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
+        if (this.position + 1 < menuElems.length) {
+          this.position++;
+        }
+        else {
+          this.position = 0;
+        }
+      }
+      else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        if (this.position - 1 > -1) {
+          this.position--
+        }
+        else {
+          this.position = menuElems.length - 1;
+        }
+      }
+      if (lastPos != this.position) {
+        this.y = menuElems[this.position][0];
+        this.x = textObjects[menuElems[this.position][1]][0].x-10;
+      }
+      let startDown = Phaser.Input.Keyboard.JustDown(cursors.start);
+      let aDown = Phaser.Input.Keyboard.JustDown(cursors.a);
+      if (startDown || aDown) {
+        menuElems[this.position][2]();
+      }
+    };
+    scene.add.existing(this);
+  }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1981,6 +2047,9 @@ let textObjects = {};  // Object for storing the displayed texts.
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
 
+let menuElements = [];  // Array for storing menu elements.
+// Elements are stored in their sequential order.
+
 // Array used for storing and iterating over the alive enemies for their AI:
 let enemiesAlive = [];
 // Becomes true if a destroyed enemy is detected in the enemies array:
@@ -2032,6 +2101,7 @@ function resetGlobalVars() {
     destroyText(key);
   }
   textObjects = {};
+  menuElements = [];
 
   totalEnemiesSpawned = 0;
   enemySpawnpoints = [];

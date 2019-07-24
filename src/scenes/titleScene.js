@@ -17,47 +17,36 @@ function titleCreate() {
 
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
   let signature = this.add.image(config.width-16, config.height-7, 'signature');
-  
-  window.validMenuPositions = [];
-
-  function addMenuOption(str, id, x, y) {
-    // Adds a menu option to the valid menu positions array.
-    validMenuPositions.push([y, id]);
-    printText(str, x, y, id);
-  }
-
-  function addMenuOptionCenterX(str, id, y) {
-    // Adds a centered menu option to the valid menu positions array.
-    validMenuPositions.push([y, id]);
-    printTextCenter(str, id, y);
-  }
 
   let playText = 'Play';
+  let playFunc = () => {
+    parentThis.scene.launch('levelIntroScene');
+    parentThis.scene.stop('titleScene');
+    destroyMenuElements()
+  };
   let optionText = 'Options';
+  let optionsFunc = () => {
+    parentThis.scene.launch('optionsMenuScene');
+    parentThis.scene.stop('titleScene');
+    destroyMenuElements()
+  };
   let quitText = 'Quit';
-  addMenuOptionCenterX(playText, 'playText', centerY - 4);
-  addMenuOptionCenterX(optionText, 'optionsText', centerY + 12);
-  addMenuOptionCenterX(quitText, 'quitText', centerY + 28);
+  let quitFunc = () => {
+    nw.App.quit();
+  };
+
+  addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX(optionText, optionsFunc, 'optionText', centerY + 12);
+  addMenuElementCenterX(quitText, quitFunc, 'quitText', centerY + 28);
 
   let menuCursorArgs = [
-    textObjects['playText'][0].x-10, textObjects['playText'][0].y, 'menuCursor'
+    parentThis,
+    textObjects[menuElements[0][1]][0].x-10,
+    textObjects[menuElements[0][1]][0].y,
+    'menuCursor',
+    menuElements
   ];
-  window.menuCursor = this.add.image(...menuCursorArgs);
-  menuCursor.position = 0;
-
-  window.menuFunctions = {
-    playText: () => {
-      parentThis.scene.launch('levelIntroScene');
-      parentThis.scene.stop('titleScene');
-    },
-    optionsText: () => {
-      parentThis.scene.launch('optionsMenuScene');
-      parentThis.scene.stop('titleScene');
-    },
-    quitText: () => {
-      nw.App.quit();
-    },
-  };
+  window.menuCursor = new menuCursorClass(...menuCursorArgs);
 
   // This creates the keybinds:
   cursors = this.input.keyboard.addKeys({
@@ -74,24 +63,5 @@ function titleCreate() {
 
 function titleUpdate() {
   parentThis = this;
-  if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-    if (menuCursor.position + 1 < validMenuPositions.length) {
-      menuCursor.position++;
-      menuCursor.y = validMenuPositions[menuCursor.position][0];
-      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
-    }
-  }
-  else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-    if (menuCursor.position - 1 > -1) {
-      menuCursor.position--
-      menuCursor.y = validMenuPositions[menuCursor.position][0];
-      menuCursor.x = textObjects[validMenuPositions[menuCursor.position][1]][0].x-10;
-    }
-  }
-  if (Phaser.Input.Keyboard.JustDown(cursors.start) || Phaser.Input.Keyboard.JustDown(cursors.a)) {
-    let currKey = validMenuPositions[menuCursor.position][1];
-    if (menuFunctions.hasOwnProperty(currKey)) {
-      menuFunctions[currKey]();
-    }
-  }
+  menuCursor.update();
 }

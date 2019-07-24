@@ -11,7 +11,7 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene,
+    loadingScene, titleScene, levelIntroScene, //keyBindingScene,
     mainScene, pausedScene, optionsMenuScene, gameOverScene
   ]
 };
@@ -32,6 +32,9 @@ let textObjects = {};  // Object for storing the displayed texts.
 // Removing an key from it or reassigning letters in key's value 
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
+
+let menuElements = [];  // Array for storing menu elements.
+// Elements are stored in their sequential order.
 
 // Array used for storing and iterating over the alive enemies for their AI:
 let enemiesAlive = [];
@@ -84,6 +87,7 @@ function resetGlobalVars() {
     destroyText(key);
   }
   textObjects = {};
+  menuElements = [];
 
   totalEnemiesSpawned = 0;
   enemySpawnpoints = [];
