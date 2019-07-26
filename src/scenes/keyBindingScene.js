@@ -55,6 +55,7 @@ function keyBindingCreate() {
         //console.log(keyBinds);
         //console.log(cursors);
         changeText(keyStr + 'Text', `${keyStr}: ${codeKeys[keyBinds[i]]}`);
+        centerTextX(keyStr + 'Text');
         parentThis.input.keyboard.removeListener('keydown');
         menuCursor.canUse = true;
       };

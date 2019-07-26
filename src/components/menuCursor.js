@@ -7,7 +7,17 @@ class menuCursorClass extends Phaser.GameObjects.Image {
     this.canUse = true;
     this.update = () => {  // Updates the cursor position upon input.
       if (this.canUse) {
+        let lastElemX = textObjects[menuElems[this.position][1]][0].x-10;
+        if (lastElemX != this.x) {
+          this.x = lastElemX;
+        }
+        // lastElemX is for when the text for the menu element changes.
+        // If the X coordinate of the leftmost letter minus 10 (cursor offset)
+        // does not equal the current cursor coordinate, then
+        // it will update it.
         let lastPos = this.position;
+        // lastPos is for updating the cursor's x/y coords when 
+        // thge cursor's "position" property changes.
         if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
           if (this.position + 1 < menuElems.length) {
             this.position++;

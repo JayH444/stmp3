@@ -95,6 +95,7 @@ function keyBindingCreate() {
         //console.log(keyBinds);
         //console.log(cursors);
         changeText(keyStr + 'Text', `${keyStr}: ${codeKeys[keyBinds[i]]}`);
+        centerTextX(keyStr + 'Text');
         parentThis.input.keyboard.removeListener('keydown');
         menuCursor.canUse = true;
       };
@@ -786,7 +787,7 @@ function printText(str, x, y, id) {
 }
 
 function printTextCenter(str, id, y=centerY-4) {
-  printText(str, centerX - (str.length*8/2)+4, y, id);
+  printText(str, centerX - (str.length*8/2) + 4, y, id);
 }
 
 function changeText(textId, newText) {
@@ -808,6 +809,15 @@ function changeText(textId, newText) {
     let l = parentThis.add.image(x, y, 'fontmap', charCode)
     currText.push(l);
     x += 8;
+  }
+}
+
+function centerTextX(textId) {
+  let textLength = textObjects[textId].length;
+  let offset = centerX - (textLength*8/2) + 4;
+  for (let letter of textObjects[textId]) {
+    letter.x = offset;
+    offset += 8;
   }
 }
 
@@ -995,7 +1005,17 @@ class menuCursorClass extends Phaser.GameObjects.Image {
     this.canUse = true;
     this.update = () => {  // Updates the cursor position upon input.
       if (this.canUse) {
+        let lastElemX = textObjects[menuElems[this.position][1]][0].x-10;
+        if (lastElemX != this.x) {
+          this.x = lastElemX;
+        }
+        // lastElemX is for when the text for the menu element changes.
+        // If the X coordinate of the leftmost letter minus 10 (cursor offset)
+        // does not equal the current cursor coordinate, then
+        // it will update it.
         let lastPos = this.position;
+        // lastPos is for updating the cursor's x/y coords when 
+        // thge cursor's "position" property changes.
         if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
           if (this.position + 1 < menuElems.length) {
             this.position++;

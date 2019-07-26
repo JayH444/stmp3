@@ -15,7 +15,7 @@ function printText(str, x, y, id) {
 }
 
 function printTextCenter(str, id, y=centerY-4) {
-  printText(str, centerX - (str.length*8/2)+4, y, id);
+  printText(str, centerX - (str.length*8/2) + 4, y, id);
 }
 
 function changeText(textId, newText) {
@@ -37,6 +37,15 @@ function changeText(textId, newText) {
     let l = parentThis.add.image(x, y, 'fontmap', charCode)
     currText.push(l);
     x += 8;
+  }
+}
+
+function centerTextX(textId) {
+  let textLength = textObjects[textId].length;
+  let offset = centerX - (textLength*8/2) + 4;
+  for (let letter of textObjects[textId]) {
+    letter.x = offset;
+    offset += 8;
   }
 }
 
