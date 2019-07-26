@@ -1,0 +1,10 @@
+{
+  "up": "W",
+  "down": "S",
+  "left": "A",
+  "right": "D",
+  "b": "SPACE",
+  "a": "CTRL",
+  "p": "P",
+  "start": "ENTER"
+}

@@ -96,7 +96,7 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
     }
   
     this.playSoundPunch = () => {
-      parentThis.sound.play('punch1');
+      soundManager.play('punch1');
     }
 
     this.getHitByProjectile = (target, projectile) => {

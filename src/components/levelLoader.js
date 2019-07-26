@@ -1,7 +1,6 @@
 function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder, and
   // returns an array of the keys for the levels.
-  let fs = require('fs');
   let files = fs.readdirSync('./root/dist/levels');
   let res = [];
   for (let file of files) {

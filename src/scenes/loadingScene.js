@@ -40,7 +40,8 @@ function loadingPreload() {  // Loads game assets.
   });
 
   //Images and sound effects:
-  let fs = require('fs');
+  window.fs = require('fs');  // File system module.
+
   let files = fs.readdirSync('./root/dist/assets');
   for (let file of files) {
     // Loop for loading the images in the assets directory.
@@ -82,9 +83,17 @@ function loadingPreload() {  // Loads game assets.
   // Level JSON loading:
   window.levels = loadLevelTilesheets();
 
+  // Misc image loading:
   this.load.image('menuCursor', 'assets/menu_cursor.png');
   this.load.image('gameLogo', 'assets/game_logo.png');
   this.load.image('tiles', 'assets/game_tiles.png');
+
+  // Keybinds loading from JSON file:
+  window.kbDir = './root/dist/keybinds.json';
+  window.keyBinds = JSON.parse(fs.readFileSync(kbDir));
+  for (let key in keyBinds) {
+    keyBinds[key] = Phaser.Input.Keyboard.KeyCodes[keyBinds[key]];
+  }
 }
 
 function loadingCreate() {

@@ -20,15 +20,15 @@ function titleCreate() {
 
   let playText = 'Play';
   let playFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('levelIntroScene');
     parentThis.scene.stop('titleScene');
-    destroyMenuElements()
   };
   let optionText = 'Options';
   let optionsFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('optionsMenuScene');
     parentThis.scene.stop('titleScene');
-    destroyMenuElements()
   };
   let quitText = 'Quit';
   let quitFunc = () => {
@@ -48,17 +48,8 @@ function titleCreate() {
   ];
   window.menuCursor = new menuCursorClass(...menuCursorArgs);
 
-  // This creates the keybinds:
-  cursors = this.input.keyboard.addKeys({
-    up: Phaser.Input.Keyboard.KeyCodes.W,
-    down: Phaser.Input.Keyboard.KeyCodes.S,
-    left: Phaser.Input.Keyboard.KeyCodes.A,
-    right: Phaser.Input.Keyboard.KeyCodes.D,
-    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    p: Phaser.Input.Keyboard.KeyCodes.P,
-    start: Phaser.Input.Keyboard.KeyCodes.ENTER,
-  });
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
 }
 
 function titleUpdate() {

@@ -77,16 +77,8 @@ function create() {
   printText(gameTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
   gameTimer.startTimer();
 
-  // This creates the keybinds:
-  cursors = this.input.keyboard.addKeys({
-    up: Phaser.Input.Keyboard.KeyCodes.W,
-    down: Phaser.Input.Keyboard.KeyCodes.S,
-    left: Phaser.Input.Keyboard.KeyCodes.A,
-    right: Phaser.Input.Keyboard.KeyCodes.D,
-    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    p: Phaser.Input.Keyboard.KeyCodes.P
-  });
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
 
   // Enemy spawn timer:
 
@@ -102,7 +94,7 @@ function create() {
   }
 
   let timerArgs = {delay: 3000, callback: createRandomEnemy, repeat: -1};
-  enemySpawnTimer = this.time.addEvent(timerArgs);
+  window.enemySpawnTimer = this.time.addEvent(timerArgs);
 
   // Pickupables:
 
@@ -123,7 +115,7 @@ function create() {
 
   food.pickup = (player, foodItem) => {
     player.addHealth();
-    parentThis.sound.play('gethealth');
+    soundManager.play('gethealth');
     food.remove(foodItem, true, true);
   }
 

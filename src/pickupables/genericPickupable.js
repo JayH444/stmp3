@@ -7,7 +7,7 @@ function mixinPickupableMethods(p, sprite, destructTime) {
 
   p.pickup = (player, child) => {
     player.addScore(250);
-    parentThis.sound.play('pickup');
+    soundManager.play('pickup');
     p.remove(child, true, true);
   }
 

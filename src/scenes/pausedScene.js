@@ -3,21 +3,16 @@
 class pausedScene extends Phaser.Scene {
   constructor() {
     super({key:'pausedScene'});
+
     this.preload = function() {
     };
+
     this.create = function() {
       printText('PAUSED', centerX-20, centerY, 'pauseText');
-      // This creates the keybinds:
-      cursorsPaused = this.input.keyboard.addKeys({
-        up: Phaser.Input.Keyboard.KeyCodes.W,
-        down: Phaser.Input.Keyboard.KeyCodes.S,
-        left: Phaser.Input.Keyboard.KeyCodes.A,
-        right: Phaser.Input.Keyboard.KeyCodes.D,
-        b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-        a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-        p: Phaser.Input.Keyboard.KeyCodes.P
-      });
-    }
+      // This creates the scene keybinds:
+      cursorsPaused = this.input.keyboard.addKeys(keyBinds);
+    };
+
     this.update = function() {
       let curP = cursorsPaused;
       if (curP.a.isDown && curP.b.isDown && curP.down.isDown) {
@@ -40,6 +35,6 @@ class pausedScene extends Phaser.Scene {
         this.scene.resume('mainScene');
         this.scene.pause('pausedScene');
       }
-    }
+    };
   }
 }

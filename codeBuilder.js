@@ -98,8 +98,9 @@ function runCodeBuilder(jsFiles, minify=false) {
   }
 
   concatAllScripts(jsFiles);
-
-  fs.writeFileSync("dist/index.js", output.join('\n\n\n'));
+  
+  let strict = '\'use strict\';\n\n';
+  fs.writeFileSync("dist/index.js", strict + output.join('\n\n\n'));
   console.log('File saved successfully!\n');
   
   if (minify) {

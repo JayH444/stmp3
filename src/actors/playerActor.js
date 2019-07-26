@@ -125,7 +125,7 @@ class Player extends Actor {
 
         if (cursors.b.isDown && onGround && !this.holdingJump) {
           this.setVelocityY(-300);
-          parentThis.sound.play('jump');
+          soundManager.play('jump');
           this.holdingJump = true;
         }
         else if (cursors.b.isUp) {

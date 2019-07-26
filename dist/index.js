@@ -1,3 +1,5 @@
+'use strict';
+
 //- src\scenes\gameOverScene.js -//////////////////////////////////////////////
 
 // Game over scene.
@@ -29,6 +31,96 @@ function gameOverCreate() {
 
 function gameOverUpdate() {
   parentThis = this;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\scenes\keyBindingScene.js -////////////////////////////////////////////
+
+// Scene for binding the controls to the game.
+
+class keyBindingScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'keyBindingScene'});
+    this.preload = keyBindingPreload;
+    this.create = keyBindingCreate;
+    this.update = keyBindingUpdate;
+  }
+}
+
+function keyBindingPreload() {
+  parentThis = this;
+}
+
+function keyBindingCreate() {
+  parentThis = this;
+
+  let saveText = 'Save Controls';
+  let saveFunc = () => {
+    let fileToWrite = {};
+    for (let key in keyBinds) {
+      fileToWrite[key] = codeKeys[keyBinds[key]];
+    }
+    let data = JSON.stringify(fileToWrite, null, 2);
+    fs.writeFileSync('./root/dist/keybinds.json', data);
+  };
+  addMenuElementCenterX(saveText, saveFunc, 'saveText', centerY + 64);
+  
+  let returnText = 'Return';
+  let returnFunc = () => {
+    destroyMenuElements();
+    parentThis.scene.launch('optionsMenuScene');
+    parentThis.scene.stop('keyBindingScene');
+  };
+  addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 80);
+
+  let offset = 80;
+  for (let i in keyBinds) {  // Makes all the menu elements for the keys.
+    // keyBinds hashtable key capitalized:
+    let keyStr = i[0].toUpperCase()+i.slice(1,);
+    // Text shown on the menu for the given key:
+    let currText = `${keyStr}: ${codeKeys[keyBinds[i]]}`;
+    let currFunc = () => {  
+      // Function associated with the menu element for the keybind changer.
+      // Menu cursor can't be used while changing a key:
+      menuCursor.canUse = false;
+      changeText(keyStr + 'Text', `${keyStr}: ...`);
+      let callback = (event) => {
+        //console.log(event);
+        let oldKeyCode = keyBinds[i];
+        keyBinds[i] = event.keyCode;
+        parentThis.input.keyboard.removeKey(oldKeyCode);
+        cursors = parentThis.input.keyboard.addKeys(keyBinds);
+        //console.log(keyBinds);
+        //console.log(cursors);
+        changeText(keyStr + 'Text', `${keyStr}: ${codeKeys[keyBinds[i]]}`);
+        parentThis.input.keyboard.removeListener('keydown');
+        menuCursor.canUse = true;
+      };
+      parentThis.input.keyboard.on('keydown', callback);
+    };
+    addMenuElementCenterX(currText, currFunc, keyStr+'Text', centerY - offset);
+    offset -= 16;
+  }
+
+
+  let menuCursorArgs = [
+    parentThis,
+    textObjects[menuElements[0][1]][0].x-10,
+    textObjects[menuElements[0][1]][0].y,
+    'menuCursor',
+    menuElements
+  ];
+  window.menuCursor = new menuCursorClass(...menuCursorArgs);
+
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
+}
+
+function keyBindingUpdate() {
+  parentThis = this;
+  menuCursor.update();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -114,7 +206,8 @@ function loadingPreload() {  // Loads game assets.
   });
 
   //Images and sound effects:
-  let fs = require('fs');
+  window.fs = require('fs');  // File system module.
+
   let files = fs.readdirSync('./root/dist/assets');
   for (let file of files) {
     // Loop for loading the images in the assets directory.
@@ -156,9 +249,17 @@ function loadingPreload() {  // Loads game assets.
   // Level JSON loading:
   window.levels = loadLevelTilesheets();
 
+  // Misc image loading:
   this.load.image('menuCursor', 'assets/menu_cursor.png');
   this.load.image('gameLogo', 'assets/game_logo.png');
   this.load.image('tiles', 'assets/game_tiles.png');
+
+  // Keybinds loading from JSON file:
+  window.kbDir = './root/dist/keybinds.json';
+  window.keyBinds = JSON.parse(fs.readFileSync(kbDir));
+  for (let key in keyBinds) {
+    keyBinds[key] = Phaser.Input.Keyboard.KeyCodes[keyBinds[key]];
+  }
 }
 
 function loadingCreate() {
@@ -275,16 +376,8 @@ function create() {
   printText(gameTimer.getTimeRemaining(), timeX + 40, 8, 'timeRemaining');
   gameTimer.startTimer();
 
-  // This creates the keybinds:
-  cursors = this.input.keyboard.addKeys({
-    up: Phaser.Input.Keyboard.KeyCodes.W,
-    down: Phaser.Input.Keyboard.KeyCodes.S,
-    left: Phaser.Input.Keyboard.KeyCodes.A,
-    right: Phaser.Input.Keyboard.KeyCodes.D,
-    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    p: Phaser.Input.Keyboard.KeyCodes.P
-  });
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
 
   // Enemy spawn timer:
 
@@ -300,7 +393,7 @@ function create() {
   }
 
   let timerArgs = {delay: 3000, callback: createRandomEnemy, repeat: -1};
-  enemySpawnTimer = this.time.addEvent(timerArgs);
+  window.enemySpawnTimer = this.time.addEvent(timerArgs);
 
   // Pickupables:
 
@@ -321,7 +414,7 @@ function create() {
 
   food.pickup = (player, foodItem) => {
     player.addHealth();
-    parentThis.sound.play('gethealth');
+    soundManager.play('gethealth');
     food.remove(foodItem, true, true);
   }
 
@@ -456,22 +549,21 @@ function optionsMenuPreload() {
 
 function optionsMenuCreate() {
   parentThis = this;
-  //printTextCenter('Hello!', 'thingie');
 
-  let playText = 'Play';
-  let playFunc = () => {
-    parentThis.scene.launch('levelIntroScene');
+  let setKeysText = 'Set Controls';
+  let setKeysFunc = () => {
+    destroyMenuElements();
+    parentThis.scene.launch('keyBindingScene');
     parentThis.scene.stop('optionsMenuScene');
-    destroyMenuElements()
   };
   let returnText = 'Return';
   let returnFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('titleScene');
     parentThis.scene.stop('optionsMenuScene');
-    destroyMenuElements()
   };
 
-  addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX(setKeysText, setKeysFunc, 'setKeysText', centerY - 4);
   addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 12);
 
   let menuCursorArgs = [
@@ -483,17 +575,8 @@ function optionsMenuCreate() {
   ];
   window.menuCursor = new menuCursorClass(...menuCursorArgs);
 
-  // This creates the keybinds:
-  cursors = this.input.keyboard.addKeys({
-    up: Phaser.Input.Keyboard.KeyCodes.W,
-    down: Phaser.Input.Keyboard.KeyCodes.S,
-    left: Phaser.Input.Keyboard.KeyCodes.A,
-    right: Phaser.Input.Keyboard.KeyCodes.D,
-    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    p: Phaser.Input.Keyboard.KeyCodes.P,
-    start: Phaser.Input.Keyboard.KeyCodes.ENTER,
-  });
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
 }
 
 function optionsMenuUpdate() {
@@ -511,21 +594,16 @@ function optionsMenuUpdate() {
 class pausedScene extends Phaser.Scene {
   constructor() {
     super({key:'pausedScene'});
+
     this.preload = function() {
     };
+
     this.create = function() {
       printText('PAUSED', centerX-20, centerY, 'pauseText');
-      // This creates the keybinds:
-      cursorsPaused = this.input.keyboard.addKeys({
-        up: Phaser.Input.Keyboard.KeyCodes.W,
-        down: Phaser.Input.Keyboard.KeyCodes.S,
-        left: Phaser.Input.Keyboard.KeyCodes.A,
-        right: Phaser.Input.Keyboard.KeyCodes.D,
-        b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-        a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-        p: Phaser.Input.Keyboard.KeyCodes.P
-      });
-    }
+      // This creates the scene keybinds:
+      cursorsPaused = this.input.keyboard.addKeys(keyBinds);
+    };
+
     this.update = function() {
       let curP = cursorsPaused;
       if (curP.a.isDown && curP.b.isDown && curP.down.isDown) {
@@ -548,7 +626,7 @@ class pausedScene extends Phaser.Scene {
         this.scene.resume('mainScene');
         this.scene.pause('pausedScene');
       }
-    }
+    };
   }
 }
 
@@ -579,15 +657,15 @@ function titleCreate() {
 
   let playText = 'Play';
   let playFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('levelIntroScene');
     parentThis.scene.stop('titleScene');
-    destroyMenuElements()
   };
   let optionText = 'Options';
   let optionsFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('optionsMenuScene');
     parentThis.scene.stop('titleScene');
-    destroyMenuElements()
   };
   let quitText = 'Quit';
   let quitFunc = () => {
@@ -607,17 +685,8 @@ function titleCreate() {
   ];
   window.menuCursor = new menuCursorClass(...menuCursorArgs);
 
-  // This creates the keybinds:
-  cursors = this.input.keyboard.addKeys({
-    up: Phaser.Input.Keyboard.KeyCodes.W,
-    down: Phaser.Input.Keyboard.KeyCodes.S,
-    left: Phaser.Input.Keyboard.KeyCodes.A,
-    right: Phaser.Input.Keyboard.KeyCodes.D,
-    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    p: Phaser.Input.Keyboard.KeyCodes.P,
-    start: Phaser.Input.Keyboard.KeyCodes.ENTER,
-  });
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
 }
 
 function titleUpdate() {
@@ -851,7 +920,6 @@ class gameTimerClass {
 function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder, and
   // returns an array of the keys for the levels.
-  let fs = require('fs');
   let files = fs.readdirSync('./root/dist/levels');
   let res = [];
   for (let file of files) {
@@ -924,35 +992,63 @@ class menuCursorClass extends Phaser.GameObjects.Image {
   constructor(scene, x, y, texture, menuElems, frame) {
     super(scene, x, y, texture, frame);
     this.position = 0;
-    this.update = () => {
-      let lastPos = this.position;
-      if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-        if (this.position + 1 < menuElems.length) {
-          this.position++;
+    this.canUse = true;
+    this.update = () => {  // Updates the cursor position upon input.
+      if (this.canUse) {
+        let lastPos = this.position;
+        if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
+          if (this.position + 1 < menuElems.length) {
+            this.position++;
+          }
+          else {
+            this.position = 0;
+          }
         }
-        else {
-          this.position = 0;
+        else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
+          if (this.position - 1 > -1) {
+            this.position--
+          }
+          else {
+            this.position = menuElems.length - 1;
+          }
         }
-      }
-      else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-        if (this.position - 1 > -1) {
-          this.position--
+        if (lastPos != this.position) {
+          this.y = menuElems[this.position][0];
+          this.x = textObjects[menuElems[this.position][1]][0].x-10;
         }
-        else {
-          this.position = menuElems.length - 1;
+        let startDown = Phaser.Input.Keyboard.JustDown(cursors.start);
+        let aDown = Phaser.Input.Keyboard.JustDown(cursors.a);
+        if (startDown || aDown) {
+          menuElems[this.position][2]();
         }
-      }
-      if (lastPos != this.position) {
-        this.y = menuElems[this.position][0];
-        this.x = textObjects[menuElems[this.position][1]][0].x-10;
-      }
-      let startDown = Phaser.Input.Keyboard.JustDown(cursors.start);
-      let aDown = Phaser.Input.Keyboard.JustDown(cursors.a);
-      if (startDown || aDown) {
-        menuElems[this.position][2]();
       }
     };
     scene.add.existing(this);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\components\soundManager.js -///////////////////////////////////////////
+
+// Class and methods for the sound manager.
+// This is mainly for preventing multiple sounds playing 
+// and "overlapping" simultaneously, in order to prevent earrape.
+// E.g. Punching and getting hit simultaneously, or 
+// head-stomping multiple enemies simultaneously.
+
+class soundManagerClass {
+  constructor() {
+    this.play = (sound) => {
+      for (let i of parentThis.sound.sounds) {
+        if (sound === i.key) {
+          i.stop();
+          i.destroy();
+        }
+      }
+      parentThis.sound.play(sound);
+    }
   }
 }
 
@@ -1059,7 +1155,7 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
     }
   
     this.playSoundPunch = () => {
-      parentThis.sound.play('punch1');
+      soundManager.play('punch1');
     }
 
     this.getHitByProjectile = (target, projectile) => {
@@ -1272,7 +1368,7 @@ class AcidBug extends enemyActor {
     this.canSpit = true;
     this.spitAcid = () => {
       if (this.canSpit && this.alive) {
-        parentThis.sound.play('spit');
+        soundManager.play('spit');
         let xPos = (this.flipX) ? this.x - 2 : this.x + 2;
         let acidBall = parentThis.physics.add.image(xPos, this.y+2, 'acid');
         acidBall.setSize(4, 4);
@@ -1783,7 +1879,7 @@ class Player extends Actor {
 
         if (cursors.b.isDown && onGround && !this.holdingJump) {
           this.setVelocityY(-300);
-          parentThis.sound.play('jump');
+          soundManager.play('jump');
           this.holdingJump = true;
         }
         else if (cursors.b.isUp) {
@@ -1977,7 +2073,7 @@ function mixinPickupableMethods(p, sprite, destructTime) {
 
   p.pickup = (player, child) => {
     player.addScore(250);
-    parentThis.sound.play('pickup');
+    soundManager.play('pickup');
     p.remove(child, true, true);
   }
 
@@ -2025,7 +2121,7 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene,
+    loadingScene, titleScene, levelIntroScene, keyBindingScene,
     mainScene, pausedScene, optionsMenuScene, gameOverScene
   ]
 };
@@ -2041,6 +2137,15 @@ let cursorsPaused;
 let paused = false;
 let parentThis;
 let randBool = true;
+
+let codeKeys = {};
+for (let key in Phaser.Input.Keyboard.KeyCodes) {
+  codeKeys[Phaser.Input.Keyboard.KeyCodes[key]] = key;
+}
+
+// Sound manager:
+let soundManager = new soundManagerClass();
+
 let textObjects = {};  // Object for storing the displayed texts.
 // Note that textObjects just serves as pointers to the letter image objects.
 // Removing an key from it or reassigning letters in key's value 

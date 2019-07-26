@@ -16,20 +16,20 @@ function optionsMenuPreload() {
 function optionsMenuCreate() {
   parentThis = this;
 
-  let setKeys = 'Set Controls';
+  let setKeysText = 'Set Controls';
   let setKeysFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('keyBindingScene');
     parentThis.scene.stop('optionsMenuScene');
-    destroyMenuElements()
   };
   let returnText = 'Return';
   let returnFunc = () => {
+    destroyMenuElements();
     parentThis.scene.launch('titleScene');
     parentThis.scene.stop('optionsMenuScene');
-    destroyMenuElements()
   };
 
-  //addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX(setKeysText, setKeysFunc, 'setKeysText', centerY - 4);
   addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 12);
 
   let menuCursorArgs = [
@@ -41,17 +41,8 @@ function optionsMenuCreate() {
   ];
   window.menuCursor = new menuCursorClass(...menuCursorArgs);
 
-  // This creates the keybinds:
-  cursors = this.input.keyboard.addKeys({
-    up: Phaser.Input.Keyboard.KeyCodes.W,
-    down: Phaser.Input.Keyboard.KeyCodes.S,
-    left: Phaser.Input.Keyboard.KeyCodes.A,
-    right: Phaser.Input.Keyboard.KeyCodes.D,
-    b: Phaser.Input.Keyboard.KeyCodes.SPACE,
-    a: Phaser.Input.Keyboard.KeyCodes.CTRL,
-    p: Phaser.Input.Keyboard.KeyCodes.P,
-    start: Phaser.Input.Keyboard.KeyCodes.ENTER,
-  });
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
 }
 
 function optionsMenuUpdate() {

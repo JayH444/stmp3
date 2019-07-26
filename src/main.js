@@ -11,7 +11,7 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene, //keyBindingScene,
+    loadingScene, titleScene, levelIntroScene, keyBindingScene,
     mainScene, pausedScene, optionsMenuScene, gameOverScene
   ]
 };
@@ -27,6 +27,15 @@ let cursorsPaused;
 let paused = false;
 let parentThis;
 let randBool = true;
+
+let codeKeys = {};
+for (let key in Phaser.Input.Keyboard.KeyCodes) {
+  codeKeys[Phaser.Input.Keyboard.KeyCodes[key]] = key;
+}
+
+// Sound manager:
+let soundManager = new soundManagerClass();
+
 let textObjects = {};  // Object for storing the displayed texts.
 // Note that textObjects just serves as pointers to the letter image objects.
 // Removing an key from it or reassigning letters in key's value 

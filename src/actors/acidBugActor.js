@@ -25,7 +25,7 @@ class AcidBug extends enemyActor {
     this.canSpit = true;
     this.spitAcid = () => {
       if (this.canSpit && this.alive) {
-        parentThis.sound.play('spit');
+        soundManager.play('spit');
         let xPos = (this.flipX) ? this.x - 2 : this.x + 2;
         let acidBall = parentThis.physics.add.image(xPos, this.y+2, 'acid');
         acidBall.setSize(4, 4);
