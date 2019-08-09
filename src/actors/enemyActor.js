@@ -44,5 +44,30 @@ class enemyActor extends Actor {
     let edArgs = this.edgeDetectorArgs;
     this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
     enemiesAlive.push(this);
+
+    // Vision ray casting:
+    this.castVisionRay = () => {
+      if (this.alive) {
+        // This controls the actor's LoS raycast.
+        let flipTernary = (this.flipX) ? 0 : config.width;
+        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
+        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
+        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
+          // If the actor is facing left, then the tiles within the line 
+          // should be iterated right-to-left instead of left-to-right.
+          let tile = tilesWithinShape[i];
+          if (tile.collides) {
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+            break;
+          }
+          (this.flipX) ? i-- : i++;
+        }
+      }
+      else {
+        delete this.lineOfSight;
+      }
+    };
   }
 }

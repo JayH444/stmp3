@@ -18,3 +18,24 @@ function destroyMenuElements() {
   }
   menuElements = [];
 }
+
+function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
+  // Basically makes the callback used for launching a new scene, deleting
+  // the current scene's menu elements, and stopping the current scene.
+  return () => {
+    destroyMenuElements();
+    parentThis.scene.launch(newSceneName);
+    parentThis.scene.stop(oldSceneName);
+  };
+}
+
+function createSceneMenuCursor() {
+  let menuCursorArgs = [
+    parentThis,
+    textObjects[menuElements[0][1]][0].x-10,
+    textObjects[menuElements[0][1]][0].y,
+    'menuCursor',
+    menuElements
+  ];
+  return new menuCursorClass(...menuCursorArgs);
+}

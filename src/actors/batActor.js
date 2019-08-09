@@ -35,30 +35,6 @@ class Bat extends enemyActor {
       this.body.velocity.y = parseInt(this.body.velocity.y * decayRatio);
     }
 
-    this.castVisionRay = () => {
-      if (this.alive) {
-        // This controls the bat's LoS raycast.
-        let flipTernary = (this.flipX) ? 0 : config.width;
-        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
-        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
-        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
-          // If the bat is facing left, then the tiles within the line 
-          // should be iterated right-to-left instead of left-to-right.
-          let tile = tilesWithinShape[i];
-          if (tile.collides) {
-            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
-            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-            break;
-          }
-          (this.flipX) ? i-- : i++;
-        }
-      }
-      else {
-        delete this.lineOfSight;
-      }
-    };
-
     this.wander = () => {
       if (this.changeFlightDirection) {
         this.flightDirection = Phaser.Math.FloatBetween(0, Math.PI*2);
@@ -163,7 +139,6 @@ class Bat extends enemyActor {
             let diffX = target.x - this.x;
             let direction = Math.atan2(diffY, diffX);
             let dirDeg = direction;
-            //console.log(`The player is at ${dirDeg * 180 / Math.PI} degrees relative to me!`);
             this.moveInDirection(direction, 1.5);
           }
           else {

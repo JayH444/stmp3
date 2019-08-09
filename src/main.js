@@ -12,7 +12,7 @@ let config = {
   },
   scene: [
     loadingScene, titleScene, levelIntroScene, keyBindingScene,
-    mainScene, pausedScene, optionsMenuScene, gameOverScene
+    mainScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
   ]
 };
 
@@ -66,7 +66,7 @@ let noTarget = false;
 let skipTitle = false;
 let allowEnemySpawning = true;
 let pauseGameTimer = false;
-let showVisionRays = false;
+let showVisionRays = true;
 let pickRandomLevel = false;
 let canPause = true;
 

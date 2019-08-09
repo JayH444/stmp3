@@ -18,35 +18,20 @@ function titleCreate() {
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
   let signature = this.add.image(config.width-16, config.height-7, 'signature');
 
-  let playText = 'Play';
-  let playFunc = () => {
-    destroyMenuElements();
-    parentThis.scene.launch('levelIntroScene');
-    parentThis.scene.stop('titleScene');
-  };
-  let optionText = 'Options';
-  let optionsFunc = () => {
-    destroyMenuElements();
-    parentThis.scene.launch('optionsMenuScene');
-    parentThis.scene.stop('titleScene');
-  };
-  let quitText = 'Quit';
+
+  let playFunc = makeSceneLaunchCallback('levelIntroScene');
+  let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
+  let creditsFunc = makeSceneLaunchCallback('creditsScene');
   let quitFunc = () => {
     nw.App.quit();
   };
 
-  addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
-  addMenuElementCenterX(optionText, optionsFunc, 'optionText', centerY + 12);
-  addMenuElementCenterX(quitText, quitFunc, 'quitText', centerY + 28);
+  addMenuElementCenterX('Play', playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
+  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 28);
+  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 44);
 
-  let menuCursorArgs = [
-    parentThis,
-    textObjects[menuElements[0][1]][0].x-10,
-    textObjects[menuElements[0][1]][0].y,
-    'menuCursor',
-    menuElements
-  ];
-  window.menuCursor = new menuCursorClass(...menuCursorArgs);
+  window.menuCursor = createSceneMenuCursor();
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);

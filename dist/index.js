@@ -1,5 +1,45 @@
 'use strict';
 
+//- src\scenes\creditsScene.js -///////////////////////////////////////////////
+
+// Credits scene.
+
+class creditsScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'creditsScene'});
+    this.preload = creditsPreload;
+    this.create = creditsCreate;
+    this.update = creditsUpdate;
+  }
+}
+
+function creditsPreload() {
+  parentThis = this;
+}
+
+function creditsCreate() {
+  parentThis = this;
+  printTextCenter('Programming & Game Design: Hexadecane', 'creditsText', centerY-24);
+  printTextCenter('Art assets: surt', 'creditsText', centerY-8);
+  printTextCenter('Created with Phaser 3', 'creditsText', centerY+16);
+
+  let returnFunc = makeSceneLaunchCallback('titleScene', 'creditsScene');
+  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY + 56);
+
+  window.menuCursor = createSceneMenuCursor();
+
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
+}
+
+function creditsUpdate() {
+  parentThis = this;
+  menuCursor.update();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\scenes\gameOverScene.js -//////////////////////////////////////////////
 
 // Game over scene.
@@ -106,14 +146,7 @@ function keyBindingCreate() {
   }
 
 
-  let menuCursorArgs = [
-    parentThis,
-    textObjects[menuElements[0][1]][0].x-10,
-    textObjects[menuElements[0][1]][0].y,
-    'menuCursor',
-    menuElements
-  ];
-  window.menuCursor = new menuCursorClass(...menuCursorArgs);
+  window.menuCursor = createSceneMenuCursor();
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -519,7 +552,7 @@ function update() {
 
   
   if (enemiesFilter) {
-    // Cleanup for dead zombies in the zombies array.
+    // Cleanup for dead enemies in the enemies array.
     enemiesAlive = enemiesAlive.filter(x => x.destroyed == false);
     enemiesFilter = false;
   }
@@ -567,14 +600,7 @@ function optionsMenuCreate() {
   addMenuElementCenterX(setKeysText, setKeysFunc, 'setKeysText', centerY - 4);
   addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 12);
 
-  let menuCursorArgs = [
-    parentThis,
-    textObjects[menuElements[0][1]][0].x-10,
-    textObjects[menuElements[0][1]][0].y,
-    'menuCursor',
-    menuElements
-  ];
-  window.menuCursor = new menuCursorClass(...menuCursorArgs);
+  window.menuCursor = createSceneMenuCursor();
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -656,35 +682,20 @@ function titleCreate() {
   let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
   let signature = this.add.image(config.width-16, config.height-7, 'signature');
 
-  let playText = 'Play';
-  let playFunc = () => {
-    destroyMenuElements();
-    parentThis.scene.launch('levelIntroScene');
-    parentThis.scene.stop('titleScene');
-  };
-  let optionText = 'Options';
-  let optionsFunc = () => {
-    destroyMenuElements();
-    parentThis.scene.launch('optionsMenuScene');
-    parentThis.scene.stop('titleScene');
-  };
-  let quitText = 'Quit';
+
+  let playFunc = makeSceneLaunchCallback('levelIntroScene');
+  let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
+  let creditsFunc = makeSceneLaunchCallback('creditsScene');
   let quitFunc = () => {
     nw.App.quit();
   };
 
-  addMenuElementCenterX(playText, playFunc, 'playText', centerY - 4);
-  addMenuElementCenterX(optionText, optionsFunc, 'optionText', centerY + 12);
-  addMenuElementCenterX(quitText, quitFunc, 'quitText', centerY + 28);
+  addMenuElementCenterX('Play', playFunc, 'playText', centerY - 4);
+  addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
+  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 28);
+  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 44);
 
-  let menuCursorArgs = [
-    parentThis,
-    textObjects[menuElements[0][1]][0].x-10,
-    textObjects[menuElements[0][1]][0].y,
-    'menuCursor',
-    menuElements
-  ];
-  window.menuCursor = new menuCursorClass(...menuCursorArgs);
+  window.menuCursor = createSceneMenuCursor();
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -763,6 +774,27 @@ function destroyMenuElements() {
     element = null;
   }
   menuElements = [];
+}
+
+function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
+  // Basically makes the callback used for launching a new scene, deleting
+  // the current scene's menu elements, and stopping the current scene.
+  return () => {
+    destroyMenuElements();
+    parentThis.scene.launch(newSceneName);
+    parentThis.scene.stop(oldSceneName);
+  };
+}
+
+function createSceneMenuCursor() {
+  let menuCursorArgs = [
+    parentThis,
+    textObjects[menuElements[0][1]][0].x-10,
+    textObjects[menuElements[0][1]][0].y,
+    'menuCursor',
+    menuElements
+  ];
+  return new menuCursorClass(...menuCursorArgs);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1353,6 +1385,31 @@ class enemyActor extends Actor {
     let edArgs = this.edgeDetectorArgs;
     this.edgeDetector = parentThis.physics.add.overlap(...edArgs);
     enemiesAlive.push(this);
+
+    // Vision ray casting:
+    this.castVisionRay = () => {
+      if (this.alive) {
+        // This controls the actor's LoS raycast.
+        let flipTernary = (this.flipX) ? 0 : config.width;
+        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
+        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
+        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
+          // If the actor is facing left, then the tiles within the line 
+          // should be iterated right-to-left instead of left-to-right.
+          let tile = tilesWithinShape[i];
+          if (tile.collides) {
+            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
+            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
+            break;
+          }
+          (this.flipX) ? i-- : i++;
+        }
+      }
+      else {
+        delete this.lineOfSight;
+      }
+    };
   }
 }
 
@@ -1454,46 +1511,42 @@ class AcidBug extends enemyActor {
     }
     
     this.move = (target) => {  // Acid bug movement AI.
-      if (this.alive) {
-        // This controls the acidBug's LoS raycast.
-        let flipTernary = (this.flipX) ? 0 : config.width;
-        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
-        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
-        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
-          // If the acidBug is facing left, then the tiles within the line 
-          // should be iterated right-to-left instead of left-to-right.
-          let tile = tilesWithinShape[i];
-          if (tile.collides) {
-            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
-            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-            break;
-          }
-          (this.flipX) ? i-- : i++;
-        }
-      }
-      else {
-        delete this.lineOfSight;
-      }
+      this.castVisionRay();
       if (this.alive && !this.stunned) {
         if (noAI === false) {  // Ignored if noAI is true.
           // Stuff for when the acidBugs sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
             this.lineOfSight.x2 >= target.x &&
-            Math.abs(this.y - target.y) <= 16 &&
+            Math.abs(this.y - target.y) <= 32 &&
             target.alive
           );
           this.seesPlayerLeft = (
             (this.x > target.x && this.flipX) &&
             this.lineOfSight.x2 <= target.x &&
-            Math.abs(this.y - target.y) <= 16 &&
+            Math.abs(this.y - target.y) <= 32 &&
             target.alive
           );
+          if (this.seesPlayerLeft || this.seesPlayerRight) {
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            // After making the raycast lock on the player, check if there's
+            // any blocks obstructing the path:
+            let LoScheck = map.getTilesWithinShape(this.lineOfSight);
+            if (LoScheck.filter(x => x.collides).length > 0) {
+              this.seesPlayerLeft = false;
+              this.seesPlayerRight = false;
+              this.castVisionRay();
+              parentThis.graphics.lineStyle(1, 0xFF0000, 1);
+            }
+            else {
+              parentThis.graphics.lineStyle(2, 0x00FF00, 1);
+            }
+          }
           // Movement conditionals, ignored if noTarget is enabled:
-          let pastLeftBorder = this.x > this.width/2 - 2
+          let pastLeftBorder = this.x > this.width/2 - 2;
           let pastRightBorder = this.x < config.width - this.width/2 + 2;
           let onScreen = pastLeftBorder && pastRightBorder;
+          // onScreen prevents the bug from spitting while offscreen.
           if (this.seesPlayerLeft && !noTarget) {
             if (Math.abs(this.x - target.x) <= 64 && onScreen) {
               this.spitAttack();
@@ -1502,7 +1555,6 @@ class AcidBug extends enemyActor {
               this.go(-this.speed);
             }
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
-            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else if (this.seesPlayerRight && !noTarget) {
             if (Math.abs(this.x - target.x) <= 64 && onScreen) {
@@ -1512,7 +1564,6 @@ class AcidBug extends enemyActor {
               this.go(this.speed);
             }
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
-            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else {
             this.wander();
@@ -1601,30 +1652,6 @@ class Bat extends enemyActor {
       }
       this.body.velocity.y = parseInt(this.body.velocity.y * decayRatio);
     }
-
-    this.castVisionRay = () => {
-      if (this.alive) {
-        // This controls the bat's LoS raycast.
-        let flipTernary = (this.flipX) ? 0 : config.width;
-        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
-        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
-        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
-          // If the bat is facing left, then the tiles within the line 
-          // should be iterated right-to-left instead of left-to-right.
-          let tile = tilesWithinShape[i];
-          if (tile.collides) {
-            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
-            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-            break;
-          }
-          (this.flipX) ? i-- : i++;
-        }
-      }
-      else {
-        delete this.lineOfSight;
-      }
-    };
 
     this.wander = () => {
       if (this.changeFlightDirection) {
@@ -1730,7 +1757,6 @@ class Bat extends enemyActor {
             let diffX = target.x - this.x;
             let direction = Math.atan2(diffY, diffX);
             let dirDeg = direction;
-            //console.log(`The player is at ${dirDeg * 180 / Math.PI} degrees relative to me!`);
             this.moveInDirection(direction, 1.5);
           }
           else {
@@ -1986,52 +2012,45 @@ class Zombie extends enemyActor {
     }
     
     this.move = (target) => {  // Zombie movement AI.
-      if (this.alive) {
-        // This controls the zombie's LoS raycast.
-        let flipTernary = (this.flipX) ? 0 : config.width;
-        this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-        let tilesWithinShape = map.getTilesWithinShape(this.lineOfSight);
-        let i = (this.flipX) ? tilesWithinShape.length - 1 : 0;
-        while ((this.flipX) ? i > -1 : i < tilesWithinShape.length) {
-          // If the zombie is facing left, then the tiles within the line 
-          // should be iterated right-to-left instead of left-to-right.
-          let tile = tilesWithinShape[i];
-          if (tile.collides) {
-            flipTernary = (!this.flipX) ? tile.pixelX - 16 : tile.pixelX;
-            this.lineOfSight.setTo(this.x, this.y, flipTernary, this.y);
-            break;
-          }
-          (this.flipX) ? i-- : i++;
-        }
-      }
-      else {
-        delete this.lineOfSight;
-      }
+      this.castVisionRay();
       if (this.alive && !this.stunned) {
         if (noAI === false) {  // Ignored if noAI is true.
           // Stuff for when the zombies sees the player:
           this.seesPlayerRight = (
             (this.x < target.x && !this.flipX) &&
             this.lineOfSight.x2 >= target.x &&
-            Math.abs(this.y - target.y) <= 16 &&
+            Math.abs(this.y - target.y) <= 32 &&
             target.alive
           );
           this.seesPlayerLeft = (
             (this.x > target.x && this.flipX) &&
             this.lineOfSight.x2 <= target.x &&
-            Math.abs(this.y - target.y) <= 16 &&
+            Math.abs(this.y - target.y) <= 32 &&
             target.alive
           );
+          if (this.seesPlayerLeft || this.seesPlayerRight) {
+            this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
+            // After making the raycast lock on the player, check if there's
+            // any blocks obstructing the path:
+            let LoScheck = map.getTilesWithinShape(this.lineOfSight);
+            if (LoScheck.filter(x => x.collides).length > 0) {
+              this.seesPlayerLeft = false;
+              this.seesPlayerRight = false;
+              this.castVisionRay();
+              parentThis.graphics.lineStyle(1, 0xFF0000, 1);
+            }
+            else {
+              parentThis.graphics.lineStyle(2, 0x00FF00, 1);
+            }
+          }
           // Movement conditionals, ignored if noTarget is enabled:
           if (this.seesPlayerLeft && !noTarget) {
             this.go(-this.speed);
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
-            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else if (this.seesPlayerRight && !noTarget) {
             this.go(this.speed);
             this.lineOfSight.setTo(this.x, this.y, target.x, target.y);
-            parentThis.graphics.lineStyle(2, 0x00FF00, 1);
           }
           else {
             this.wander();
@@ -2142,7 +2161,7 @@ let config = {
   },
   scene: [
     loadingScene, titleScene, levelIntroScene, keyBindingScene,
-    mainScene, pausedScene, optionsMenuScene, gameOverScene
+    mainScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
   ]
 };
 
@@ -2196,7 +2215,7 @@ let noTarget = false;
 let skipTitle = false;
 let allowEnemySpawning = true;
 let pauseGameTimer = false;
-let showVisionRays = false;
+let showVisionRays = true;
 let pickRandomLevel = false;
 let canPause = true;
 

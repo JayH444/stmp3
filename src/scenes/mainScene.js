@@ -219,7 +219,7 @@ function update() {
 
   
   if (enemiesFilter) {
-    // Cleanup for dead zombies in the zombies array.
+    // Cleanup for dead enemies in the enemies array.
     enemiesAlive = enemiesAlive.filter(x => x.destroyed == false);
     enemiesFilter = false;
   }
