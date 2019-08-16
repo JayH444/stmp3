@@ -94,6 +94,10 @@ function loadingPreload() {  // Loads game assets.
   for (let key in keyBinds) {
     keyBinds[key] = Phaser.Input.Keyboard.KeyCodes[keyBinds[key]];
   }
+
+  // Scores loading from JSON file:
+  window.scoresDir = './root/dist/scores.json';
+  window.scores = JSON.parse(fs.readFileSync(scoresDir));
 }
 
 function loadingCreate() {

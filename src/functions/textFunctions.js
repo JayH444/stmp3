@@ -71,3 +71,10 @@ function destroyText(textId) {
   textObjects[textId] = undefined;
   delete textObjects[textId];
 }
+
+function destroyAllText() {
+  // Removes and destroys ALL text elements in the textObjects array.
+  for (let i in textObjects) {
+    destroyText(i);
+  }
+}

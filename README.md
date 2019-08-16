@@ -1,4 +1,4 @@
-# stdp3
+# stmp3
 Super Turbo Monster Puncher... **THREE!**
 
 Deadly creeps are taking over the town! Are you a bad enough dude to punch them all?

@@ -20,7 +20,7 @@ class pausedScene extends Phaser.Scene {
         parentThis.scene.stop('mainScene');
         parentThis.scene.stop('pausedScene');
         totalScore = 0;
-        resetGlobalVars()
+        resetGlobalVars();
       }
       if (Phaser.Input.Keyboard.JustDown(curP.p) && paused) {
         destroyText('pauseText');

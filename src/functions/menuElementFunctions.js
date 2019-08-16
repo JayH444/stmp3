@@ -23,7 +23,9 @@ function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
   // Basically makes the callback used for launching a new scene, deleting
   // the current scene's menu elements, and stopping the current scene.
   return () => {
+    menuCursor.destroy();
     destroyMenuElements();
+    destroyAllText();
     parentThis.scene.launch(newSceneName);
     parentThis.scene.stop(oldSceneName);
   };

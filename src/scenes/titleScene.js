@@ -21,6 +21,7 @@ function titleCreate() {
 
   let playFunc = makeSceneLaunchCallback('levelIntroScene');
   let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
+  let scoresFunc = makeSceneLaunchCallback('scoresScene');
   let creditsFunc = makeSceneLaunchCallback('creditsScene');
   let quitFunc = () => {
     nw.App.quit();
@@ -28,9 +29,11 @@ function titleCreate() {
 
   addMenuElementCenterX('Play', playFunc, 'playText', centerY - 4);
   addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
-  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 28);
-  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 44);
+  addMenuElementCenterX('Scores', scoresFunc, 'scoresText', centerY + 28);
+  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 44);
+  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);
 
+  
   window.menuCursor = createSceneMenuCursor();
 
   // This creates the scene keybinds:

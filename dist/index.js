@@ -19,15 +19,16 @@ function creditsPreload() {
 
 function creditsCreate() {
   parentThis = this;
-  printTextCenter('Programming & Game Design: Hexadecane', 'creditsText', centerY-24);
-  printTextCenter('Art assets: surt', 'creditsText', centerY-8);
-  printTextCenter('Created with Phaser 3', 'creditsText', centerY+16);
+  printTextCenter('Programming, SFX, & Game Design:', 'creditsText1', centerY-48);
+  printTextCenter('Hexadecane', 'creditsText2', centerY-36);
+  printTextCenter('Art assets:', 'creditsText3', centerY-16);
+  printTextCenter('surt', 'creditsText4', centerY-4);
+  printTextCenter('Created with Phaser 3', 'creditsText5', centerY+16);
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'creditsScene');
-  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY + 56);
+  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
 
   window.menuCursor = createSceneMenuCursor();
-
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
 }
@@ -62,15 +63,34 @@ function gameOverCreate() {
   resetGlobalVars()
   printTextCenter('Game Over', 'gameOverText', centerY-8);
   printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
-  totalScore = 0;
+  /*totalScore = 0;
   setTimeout(() => {
     parentThis.scene.launch('titleScene');
     parentThis.scene.stop('gameOverScene');    
-  }, 3000);
+  }, 3000);*/
+
+  let saveScoreFunc = () => {
+    let name = 'TESTA';
+    scores[name] = totalScore;
+    let data = JSON.stringify(scores, null, 2);
+    fs.writeFileSync('./root/dist/scores.json', data);
+    totalScore = 0;
+  }
+
+  let returnFunc = makeSceneLaunchCallback('titleScene', 'gameOverScene');
+  addMenuElementCenterX('Return', returnFunc, 'returnText', centerY+72);
+
+  addMenuElementCenterX('Save Score', saveScoreFunc, 'saveScoreText', centerY+56);
+
+  window.menuCursor = createSceneMenuCursor();
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
+
 }
 
 function gameOverUpdate() {
   parentThis = this;
+  menuCursor.update();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -294,6 +314,10 @@ function loadingPreload() {  // Loads game assets.
   for (let key in keyBinds) {
     keyBinds[key] = Phaser.Input.Keyboard.KeyCodes[keyBinds[key]];
   }
+
+  // Scores loading from JSON file:
+  window.scoresDir = './root/dist/scores.json';
+  window.scores = JSON.parse(fs.readFileSync(scoresDir));
 }
 
 function loadingCreate() {
@@ -638,7 +662,7 @@ class pausedScene extends Phaser.Scene {
         parentThis.scene.stop('mainScene');
         parentThis.scene.stop('pausedScene');
         totalScore = 0;
-        resetGlobalVars()
+        resetGlobalVars();
       }
       if (Phaser.Input.Keyboard.JustDown(curP.p) && paused) {
         destroyText('pauseText');
@@ -655,6 +679,57 @@ class pausedScene extends Phaser.Scene {
       }
     };
   }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\scenes\scoresScene.js -////////////////////////////////////////////////
+
+// Scores scene.
+
+class scoresScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'scoresScene'});
+    this.preload = scoresPreload;
+    this.create = scoresCreate;
+    this.update = scoresUpdate;
+  }
+}
+
+function scoresPreload() {
+  parentThis = this;
+}
+
+function scoresCreate() {
+  parentThis = this;
+
+  console.log(scores);
+
+  let offset = -48;
+  let scoresSorted = [...Object.keys(scores)].sort((a, b) => scores[b] - scores[a]);
+  console.log(scoresSorted);
+  for (let score of scoresSorted) {
+    let entry = `${score}: ${scores[score].toString().padStart(12, '-')}`
+    printTextCenter(entry, score+'playerScore', centerY + offset);
+    offset += 12;
+  }
+
+  let returnFunc = makeSceneLaunchCallback('titleScene', 'scoresScene');
+  let deleteReturn = () => {
+    returnFunc();
+  };
+  addMenuElementCenterX('Return', returnFunc, 'returnScoreText', centerY + 72);
+
+  window.menuCursor = createSceneMenuCursor();
+
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
+}
+
+function scoresUpdate() {
+  parentThis = this;
+  menuCursor.update();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -685,6 +760,7 @@ function titleCreate() {
 
   let playFunc = makeSceneLaunchCallback('levelIntroScene');
   let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
+  let scoresFunc = makeSceneLaunchCallback('scoresScene');
   let creditsFunc = makeSceneLaunchCallback('creditsScene');
   let quitFunc = () => {
     nw.App.quit();
@@ -692,9 +768,11 @@ function titleCreate() {
 
   addMenuElementCenterX('Play', playFunc, 'playText', centerY - 4);
   addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
-  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 28);
-  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 44);
+  addMenuElementCenterX('Scores', scoresFunc, 'scoresText', centerY + 28);
+  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 44);
+  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);
 
+  
   window.menuCursor = createSceneMenuCursor();
 
   // This creates the scene keybinds:
@@ -780,7 +858,9 @@ function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
   // Basically makes the callback used for launching a new scene, deleting
   // the current scene's menu elements, and stopping the current scene.
   return () => {
+    menuCursor.destroy();
     destroyMenuElements();
+    destroyAllText();
     parentThis.scene.launch(newSceneName);
     parentThis.scene.stop(oldSceneName);
   };
@@ -874,6 +954,13 @@ function destroyText(textId) {
   }
   textObjects[textId] = undefined;
   delete textObjects[textId];
+}
+
+function destroyAllText() {
+  // Removes and destroys ALL text elements in the textObjects array.
+  for (let i in textObjects) {
+    destroyText(i);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2160,8 +2247,8 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene, keyBindingScene,
-    mainScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
+    loadingScene, titleScene, levelIntroScene, keyBindingScene, mainScene,
+    scoresScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
   ]
 };
 

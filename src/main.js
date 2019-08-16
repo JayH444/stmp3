@@ -11,8 +11,8 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene, keyBindingScene,
-    mainScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
+    loadingScene, titleScene, levelIntroScene, keyBindingScene, mainScene,
+    scoresScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
   ]
 };
 

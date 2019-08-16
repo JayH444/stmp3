@@ -15,15 +15,16 @@ function creditsPreload() {
 
 function creditsCreate() {
   parentThis = this;
-  printTextCenter('Programming & Game Design: Hexadecane', 'creditsText', centerY-24);
-  printTextCenter('Art assets: surt', 'creditsText', centerY-8);
-  printTextCenter('Created with Phaser 3', 'creditsText', centerY+16);
+  printTextCenter('Programming, SFX, & Game Design:', 'creditsText1', centerY-48);
+  printTextCenter('Hexadecane', 'creditsText2', centerY-36);
+  printTextCenter('Art assets:', 'creditsText3', centerY-16);
+  printTextCenter('surt', 'creditsText4', centerY-4);
+  printTextCenter('Created with Phaser 3', 'creditsText5', centerY+16);
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'creditsScene');
-  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY + 56);
+  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
 
   window.menuCursor = createSceneMenuCursor();
-
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
 }
