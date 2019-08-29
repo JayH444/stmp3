@@ -22,9 +22,10 @@ function creditsCreate() {
   printTextCenter('Created with Phaser 3', 'creditsText5', centerY+16);
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'creditsScene');
-  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
+  //addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
+  createMenuButtonCenterX('returnButton', 'Return', returnFunc, centerY+72)
 
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('returnButton');
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
 }

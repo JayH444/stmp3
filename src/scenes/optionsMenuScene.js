@@ -16,23 +16,30 @@ function optionsMenuPreload() {
 function optionsMenuCreate() {
   parentThis = this;
 
-  let setKeysText = 'Set Controls';
   let setKeysFunc = () => {
-    destroyMenuElements();
+    destroyMenuButtons();
     parentThis.scene.launch('keyBindingScene');
     parentThis.scene.stop('optionsMenuScene');
   };
-  let returnText = 'Return';
   let returnFunc = () => {
-    destroyMenuElements();
+    destroyMenuButtons();
     parentThis.scene.launch('titleScene');
     parentThis.scene.stop('optionsMenuScene');
   };
 
-  addMenuElementCenterX(setKeysText, setKeysFunc, 'setKeysText', centerY - 4);
-  addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 12);
+  let setKeysButtonArgs = [
+    'setkeysButton', 'Set Controls', setKeysFunc, centerY - 4,
+    createMenuButtonCons('returnButton', 'returnButton')
+  ];
+  createMenuButtonCenterX(...setKeysButtonArgs);
 
-  window.menuCursor = createSceneMenuCursor();
+  let returnButtonArgs = [
+    'returnButton', 'Return', returnFunc, centerY + 12,
+    createMenuButtonCons('setkeysButton', 'setkeysButton')
+  ];
+  createMenuButtonCenterX(...returnButtonArgs);
+
+  window.menuCursor = createSceneMenuCursor('setkeysButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);

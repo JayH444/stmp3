@@ -19,7 +19,7 @@ function titleCreate() {
   let signature = this.add.image(config.width-16, config.height-7, 'signature');
 
 
-  let playFunc = makeSceneLaunchCallback('levelIntroScene');
+  /* let playFunc = makeSceneLaunchCallback('levelIntroScene');
   let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
   let scoresFunc = makeSceneLaunchCallback('scoresScene');
   let creditsFunc = makeSceneLaunchCallback('creditsScene');
@@ -31,10 +31,48 @@ function titleCreate() {
   addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
   addMenuElementCenterX('Scores', scoresFunc, 'scoresText', centerY + 28);
   addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 44);
-  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);
+  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);*/
+  
+  // Button name abbreviation + Cons = The connections of that button
+  // for the given keypresses.
+
+  /*let pbCons = createMenuButtonCons('scoresButton', 'optionsButton');
+  let playFunc = makeSceneLaunchCallback('levelIntroScene');
+  createMenuButtonCenterX('playButton', 'Play', playFunc, centerY - 4, pbCons);*/
+
+  let mbIDs = [
+    'playButton',
+    'optionsButton',
+    'scoresButton',
+    'creditsButton',
+    'quitButton'
+  ];
+  let sceneLaunchFuncDestinations = [
+    'levelIntroScene',
+    'optionsMenuScene',
+    'scoresScene',
+    'creditsScene'
+  ];
+  let mbFuncs = [
+    ...sceneLaunchFuncDestinations.map(x => makeSceneLaunchCallback(x)),
+    quitGame
+  ];
+
+  for (let i = 0; i < 5; i++) {
+    // This is for creating the title's buttons.
+    let currCons = createMenuButtonCons(
+      mbIDs[((mbIDs.length - 1) + i) % mbIDs.length],
+      mbIDs[(i + 1) % mbIDs.length]
+    );
+    let currFunc = mbFuncs[i];
+    let text = mbIDs[i].match(/^[a-z]+/)[0];
+    text = text[0].toUpperCase() + text.slice(1,);
+    let args = [mbIDs[i], text, currFunc, centerY -4 + (i * 16), currCons];
+    createMenuButtonCenterX(...args);
+  }
 
   
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('playButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);

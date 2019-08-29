@@ -26,9 +26,10 @@ function creditsCreate() {
   printTextCenter('Created with Phaser 3', 'creditsText5', centerY+16);
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'creditsScene');
-  addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
+  //addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
+  createMenuButtonCenterX('returnButton', 'Return', returnFunc, centerY+72)
 
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('returnButton');
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
 }
@@ -69,20 +70,25 @@ function gameOverCreate() {
     parentThis.scene.stop('gameOverScene');    
   }, 3000);*/
 
-  let saveScoreFunc = () => {
-    let name = 'TESTA';
-    scores[name] = totalScore;
-    let data = JSON.stringify(scores, null, 2);
-    fs.writeFileSync('./root/dist/scores.json', data);
+  let toTitle = makeSceneLaunchCallback('titleScene', 'gameOverScene');
+  let returnFunc = () => {
     totalScore = 0;
-  }
+    toTitle();
+  };
+  let cbArgs = [
+    'continueButton', 'Continue', returnFunc, centerY + 72,
+    createMenuButtonCons('saveButton', 'saveButton')
+  ];
+  createMenuButtonCenterX(...cbArgs);
 
-  let returnFunc = makeSceneLaunchCallback('titleScene', 'gameOverScene');
-  addMenuElementCenterX('Return', returnFunc, 'returnText', centerY+72);
+  let saveFunc = makeSceneLaunchCallback('nameEnteringScene', 'gameOverScene');
+  let ssbArgs = [
+    'saveButton', 'Save Score', saveFunc, centerY + 56,
+    createMenuButtonCons('continueButton', 'continueButton')
+  ];
+  createMenuButtonCenterX(...ssbArgs);
 
-  addMenuElementCenterX('Save Score', saveScoreFunc, 'saveScoreText', centerY+56);
-
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('continueButton');
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
 
@@ -116,36 +122,21 @@ function keyBindingPreload() {
 function keyBindingCreate() {
   parentThis = this;
 
-  let saveText = 'Save Controls';
-  let saveFunc = () => {
-    let fileToWrite = {};
-    for (let key in keyBinds) {
-      fileToWrite[key] = codeKeys[keyBinds[key]];
-    }
-    let data = JSON.stringify(fileToWrite, null, 2);
-    fs.writeFileSync('./root/dist/keybinds.json', data);
-  };
-  addMenuElementCenterX(saveText, saveFunc, 'saveText', centerY + 64);
-  
-  let returnText = 'Return';
-  let returnFunc = () => {
-    destroyMenuElements();
-    parentThis.scene.launch('optionsMenuScene');
-    parentThis.scene.stop('keyBindingScene');
-  };
-  addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 80);
+  let keyBindIDs = Object.keys(keyBinds);
+  console.log(keyBindIDs);
 
   let offset = 80;
-  for (let i in keyBinds) {  // Makes all the menu elements for the keys.
+  for (let i of keyBindIDs) {  // Makes all the menu buttons for the keys.
     // keyBinds hashtable key capitalized:
     let keyStr = i[0].toUpperCase()+i.slice(1,);
+    let currID = i+'Button'
     // Text shown on the menu for the given key:
     let currText = `${keyStr}: ${codeKeys[keyBinds[i]]}`;
     let currFunc = () => {  
-      // Function associated with the menu element for the keybind changer.
+      // Function associated with the menu button for the keybind changer.
       // Menu cursor can't be used while changing a key:
       menuCursor.canUse = false;
-      changeText(keyStr + 'Text', `${keyStr}: ...`);
+      changeText(currID, `${keyStr}: ...`);
       let callback = (event) => {
         //console.log(event);
         let oldKeyCode = keyBinds[i];
@@ -154,19 +145,67 @@ function keyBindingCreate() {
         cursors = parentThis.input.keyboard.addKeys(keyBinds);
         //console.log(keyBinds);
         //console.log(cursors);
-        changeText(keyStr + 'Text', `${keyStr}: ${codeKeys[keyBinds[i]]}`);
-        centerTextX(keyStr + 'Text');
+        changeText(currID, `${keyStr}: ${codeKeys[keyBinds[i]]}`);
+        centerTextX(currID);
         parentThis.input.keyboard.removeListener('keydown');
         menuCursor.canUse = true;
       };
       parentThis.input.keyboard.on('keydown', callback);
     };
-    addMenuElementCenterX(currText, currFunc, keyStr+'Text', centerY - offset);
+    createMenuButtonCenterX(currID, currText, currFunc, centerY - offset);
     offset -= 16;
   }
 
+  let topBindButtonID = keyBindIDs[0]+'Button';
+  let bottomBindButtonID = keyBindIDs[keyBindIDs.length-1]+'Button';
 
-  window.menuCursor = createSceneMenuCursor();
+  // Code for creating the save and return button, and connecting them to
+  // the top and bottom keybind button. (topBindButtonID & bottomBindButtonID)
+  let saveFunc = () => {
+    let fileToWrite = {};
+    for (let key in keyBinds) {
+      fileToWrite[key] = codeKeys[keyBinds[key]];
+    }
+    let data = JSON.stringify(fileToWrite, null, 2);
+    fs.writeFileSync('./root/dist/keybinds.json', data);
+  };
+  let saveButtonArgs = [
+    'saveButton', 'Save Controls', saveFunc, centerY + 64,
+    createMenuButtonCons(bottomBindButtonID, 'returnButton')
+  ];
+  createMenuButtonCenterX(...saveButtonArgs)
+  
+  let returnFunc = () => {
+    destroyMenuButtons();
+    parentThis.scene.launch('optionsMenuScene');
+    parentThis.scene.stop('keyBindingScene');
+  };
+  let returnButtonArgs = [
+    'returnButton', 'Return', returnFunc, centerY + 80,
+    createMenuButtonCons('saveButton', keyBindIDs[0]+'Button')
+  ];
+  createMenuButtonCenterX(...returnButtonArgs);
+
+  addConsToMenuButton(topBindButtonID, true, 'returnButton');
+  addConsToMenuButton(bottomBindButtonID, true, undefined, 'saveButton');
+
+  // For loop for iterating over the bind buttons between first & last, and
+  // creating their corresponding button input connections:
+  let lastID;
+  for (let i = 0; i < keyBindIDs.length; i++) {
+    let currID = keyBindIDs[i]+'Button';
+    let nextID = undefined;
+    if (menuButtons[currID].up != undefined) {
+      lastID = undefined;
+    }
+    if (menuButtons[currID].down == undefined) {
+      nextID = keyBindIDs[i+1]+'Button';
+    }
+    addConsToMenuButton(currID, false, lastID, nextID);
+    lastID = currID;
+  }
+
+  window.menuCursor = createSceneMenuCursor('returnButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -588,6 +627,156 @@ function update() {
 ///////////////////////////////////////////////////////////////////////////////
 
 
+//- src\scenes\nameEnteringScene.js -//////////////////////////////////////////
+
+// Name entering scene.
+
+class nameEnteringScene extends Phaser.Scene {
+  constructor() {
+    super({key: 'nameEnteringScene'});
+    this.preload = nameEnteringPreload;
+    this.create = nameEnteringCreate;
+    this.update = nameEnteringUpdate;
+  }
+}
+
+function nameEnteringPreload() {
+  parentThis = this;
+}
+
+function nameEnteringCreate() {
+  parentThis = this;
+
+  let letterFunc = (L) => {
+    if (enteredName.length < 5) {
+      enteredName += L;
+      let displayed = enteredName;
+      changeText('enteredName', displayed.padEnd(5, '_'));
+    }
+  };
+  let kb = [
+    'abcdef',
+    'ghijkl',
+    'mnopqr',
+    'stuvwx',
+    'yz0123',
+    '456789'
+  ];
+  let offsetY = 72;
+  for (let row of kb) {
+    let offsetX = 110;
+    for (let L of row) {
+      let LU = L.toUpperCase();
+      createMenuButton(L+'Button', LU, () => letterFunc(LU), offsetX, offsetY);
+      offsetX += 20;
+    }
+    offsetY += 16;
+  }
+  for (let i = 0; i < 6; i++) {
+    for (let j = 0; j < 6; j++) {
+      let currCons = [...Array(4)];
+      
+      // Conditional statements for the button connections:
+
+      // Up
+      if (i == 0) {
+        // If on the first row, connect to the return button for moving up.
+        currCons[0] = 'returnButton';
+      }
+      else {
+        currCons[0] = kb[i-1][j]+'Button';
+      }
+
+      // Down
+      if (i == 5) {
+        // If on the last row, connect to the clear
+        // and submit buttons below for moving down.
+        currCons[1] = (j < 3) ? 'submitButton' : 'eraseButton';
+      }
+      else {
+        currCons[1] = kb[i+1][j]+'Button';
+      }
+
+      // Left
+      if (j == 0) {
+        currCons[2] = kb[i][5]+'Button';
+      }
+      else {
+        currCons[2] = kb[i][j-1]+'Button';
+      }
+
+      // Right
+      if (j == 5) {
+        currCons[3] = kb[i][0]+'Button';
+      }
+      else {
+        currCons[3] = kb[i][j+1]+'Button';
+      }
+
+      addConsToMenuButton(kb[i][j]+'Button', true, ...currCons);
+    }
+  }
+
+  //let returnFunc = makeSceneLaunchCallback('titleScene', 'nameEnteringScene');
+  //addMenuElementCenterX('Return', returnFunc, 'returnScoreText', centerY + 72);
+
+  printTextCenter('Enter a name:', 'nameEnteringTitle', 16);
+  
+  printTextCenter(enteredName.padEnd(5, '_'), 'enteredName', 48);
+
+  let eraseButtonFunc = () => {
+    enteredName = enteredName.slice(0, enteredName.length-1);
+    let displayed = enteredName;
+    changeText('enteredName', displayed.padEnd(5, '_'));
+  }
+  createMenuButtonOffsetCenterX('eraseButton', 'Erase', eraseButtonFunc, 32, centerY + 56, createMenuButtonCons('8Button', 'returnButton', 'submitButton', 'submitButton'));
+
+  /*let saveScoreFunc = () => {
+    let name = 'TESTA';
+    scores[name] = totalScore;
+    let data = JSON.stringify(scores, null, 2);
+    fs.writeFileSync('./root/dist/scores.json', data);
+    totalScore = 0;
+  }*/
+
+  let submitButtonFunc = () => {
+    console.log(totalScore);
+    if (enteredName.length == 5) {
+      let minScoreName = null;
+      for (let name in scores) {
+        if (minScoreName == null || scores[name] < scores[minScoreName]) {
+          minScoreName = name;
+        }
+      }
+      console.log(`Replacing ${minScoreName}...`);
+      delete scores[minScoreName];
+      scores[enteredName] = totalScore;
+      let data = JSON.stringify(scores, null, 2);
+      fs.writeFileSync('./root/dist/scores.json', data);
+      totalScore = 0;
+    }
+    makeSceneLaunchCallback('scoreSubmittedScene', 'nameEnteringScene')();
+  }
+  createMenuButtonOffsetCenterX('submitButton', 'Submit', submitButtonFunc, -32, centerY + 56, createMenuButtonCons('5Button', 'returnButton', 'eraseButton', 'eraseButton'));
+
+  createReturnButtonCenterX('titleScene', 'nameEnteringScene', centerY + 72, createMenuButtonCons('submitButton', 'aButton'));
+  changeMenuButtonText('returnButton', 'Cancel & Return');
+  centerMenuButtonTextX('returnButton');
+
+  window.menuCursor = createSceneMenuCursor('returnButton');
+
+  // This creates the scene keybinds:
+  cursors = this.input.keyboard.addKeys(keyBinds);
+}
+
+function nameEnteringUpdate() {
+  parentThis = this;
+  menuCursor.update();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
 //- src\scenes\optionsMenuScene.js -///////////////////////////////////////////
 
 // Options menu scene.
@@ -608,23 +797,30 @@ function optionsMenuPreload() {
 function optionsMenuCreate() {
   parentThis = this;
 
-  let setKeysText = 'Set Controls';
   let setKeysFunc = () => {
-    destroyMenuElements();
+    destroyMenuButtons();
     parentThis.scene.launch('keyBindingScene');
     parentThis.scene.stop('optionsMenuScene');
   };
-  let returnText = 'Return';
   let returnFunc = () => {
-    destroyMenuElements();
+    destroyMenuButtons();
     parentThis.scene.launch('titleScene');
     parentThis.scene.stop('optionsMenuScene');
   };
 
-  addMenuElementCenterX(setKeysText, setKeysFunc, 'setKeysText', centerY - 4);
-  addMenuElementCenterX(returnText, returnFunc, 'returnText', centerY + 12);
+  let setKeysButtonArgs = [
+    'setkeysButton', 'Set Controls', setKeysFunc, centerY - 4,
+    createMenuButtonCons('returnButton', 'returnButton')
+  ];
+  createMenuButtonCenterX(...setKeysButtonArgs);
 
-  window.menuCursor = createSceneMenuCursor();
+  let returnButtonArgs = [
+    'returnButton', 'Return', returnFunc, centerY + 12,
+    createMenuButtonCons('setkeysButton', 'setkeysButton')
+  ];
+  createMenuButtonCenterX(...returnButtonArgs);
+
+  window.menuCursor = createSceneMenuCursor('setkeysButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -706,7 +902,7 @@ function scoresCreate() {
 
   console.log(scores);
 
-  let offset = -48;
+  let offset = -56;
   let scoresSorted = [...Object.keys(scores)].sort((a, b) => scores[b] - scores[a]);
   console.log(scoresSorted);
   for (let score of scoresSorted) {
@@ -716,12 +912,9 @@ function scoresCreate() {
   }
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'scoresScene');
-  let deleteReturn = () => {
-    returnFunc();
-  };
-  addMenuElementCenterX('Return', returnFunc, 'returnScoreText', centerY + 72);
+  createMenuButtonCenterX('returnButton', 'Return', returnFunc, centerY+72);
 
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('returnButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -731,6 +924,39 @@ function scoresUpdate() {
   parentThis = this;
   menuCursor.update();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+//- src\scenes\scoreSubmittedScene.js -////////////////////////////////////////
+
+// Score submitted scene.
+
+class scoreSubmittedScene extends Phaser.Scene {
+    constructor() {
+      super({key: 'scoreSubmittedScene'});
+      this.preload = scoreSubmittedPreload;
+      this.create = scoreSubmittedCreate;
+      this.update = scoreSubmittedUpdate;
+    }
+  }
+  
+  function scoreSubmittedPreload() {
+    parentThis = this;
+  }
+  
+  function scoreSubmittedCreate() {
+    parentThis = this;
+    printTextCenter('Score submitted!', 'scoreSubmittedText');
+    setTimeout(() => {
+      parentThis.scene.launch('titleScene');
+      parentThis.scene.stop('scoreSubmittedScene');    
+    }, 1500);
+  }
+  
+  function scoreSubmittedUpdate() {
+    parentThis = this;
+  }
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -758,7 +984,7 @@ function titleCreate() {
   let signature = this.add.image(config.width-16, config.height-7, 'signature');
 
 
-  let playFunc = makeSceneLaunchCallback('levelIntroScene');
+  /* let playFunc = makeSceneLaunchCallback('levelIntroScene');
   let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
   let scoresFunc = makeSceneLaunchCallback('scoresScene');
   let creditsFunc = makeSceneLaunchCallback('creditsScene');
@@ -770,10 +996,48 @@ function titleCreate() {
   addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
   addMenuElementCenterX('Scores', scoresFunc, 'scoresText', centerY + 28);
   addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 44);
-  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);
+  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);*/
+  
+  // Button name abbreviation + Cons = The connections of that button
+  // for the given keypresses.
+
+  /*let pbCons = createMenuButtonCons('scoresButton', 'optionsButton');
+  let playFunc = makeSceneLaunchCallback('levelIntroScene');
+  createMenuButtonCenterX('playButton', 'Play', playFunc, centerY - 4, pbCons);*/
+
+  let mbIDs = [
+    'playButton',
+    'optionsButton',
+    'scoresButton',
+    'creditsButton',
+    'quitButton'
+  ];
+  let sceneLaunchFuncDestinations = [
+    'levelIntroScene',
+    'optionsMenuScene',
+    'scoresScene',
+    'creditsScene'
+  ];
+  let mbFuncs = [
+    ...sceneLaunchFuncDestinations.map(x => makeSceneLaunchCallback(x)),
+    quitGame
+  ];
+
+  for (let i = 0; i < 5; i++) {
+    // This is for creating the title's buttons.
+    let currCons = createMenuButtonCons(
+      mbIDs[((mbIDs.length - 1) + i) % mbIDs.length],
+      mbIDs[(i + 1) % mbIDs.length]
+    );
+    let currFunc = mbFuncs[i];
+    let text = mbIDs[i].match(/^[a-z]+/)[0];
+    text = text[0].toUpperCase() + text.slice(1,);
+    let args = [mbIDs[i], text, currFunc, centerY -4 + (i * 16), currCons];
+    createMenuButtonCenterX(...args);
+  }
 
   
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('playButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
@@ -831,48 +1095,108 @@ function pickRandomSprite(arr) {
 ///////////////////////////////////////////////////////////////////////////////
 
 
-//- src\functions\menuElementFunctions.js -////////////////////////////////////
+//- src\functions\menuButtonFunctions.js -/////////////////////////////////////
 
-function addMenuElement(str, func, id, x, y) {
-  // Adds a menu option to the valid menu positions array.
-  menuElements.push([y, id, func]);
-  printText(str, x, y, id);
-}
-
-function addMenuElementCenterX(str, func, id, y) {
+/*function addMenuElementCenterX(str, func, id, y) {
   // Adds a centered menu option to the valid menu positions array.
   menuElements.push([y, id, func]);
   printTextCenter(str, id, y);
+}*/
+
+function addMenuButtonObject(buttonObj) {
+  // A button object has the following properties:
+  // id, text, func, x, y, and its connections for a given key press.
+  // (e.g. up)
+  menuButtons[buttonObj.id] = buttonObj;
+  printText(buttonObj.text, buttonObj.x, buttonObj.y, buttonObj.id);
 }
 
-function destroyMenuElements() {
-  // Destroys the contents of the menuElements array.
-  for (let element of menuElements) {
-    destroyText(element[1]);
-    element = null;
+function createMenuButton(id, text, func, x, y, connections) {
+  // Shorthand function for quickly creating a menu button.
+  let mbObject = {
+    id: id,
+    text: text,
+    func: func,
+    x: x,
+    y: y,
+  };
+  for (let c in connections) {
+    mbObject[c] = connections[c];
   }
-  menuElements = [];
+  addMenuButtonObject(mbObject);
+}
+
+function createMenuButtonCenterX(id, text, func, y, connections) {
+  let x = centerX - (text.length*8/2) + 4;
+  createMenuButton(id, text, func, x, y, connections);
+}
+
+function createMenuButtonOffsetCenterX(id, text, func, xOffset, y, connections) {
+  let x = (centerX - (text.length*8/2) + 4) + xOffset;
+  createMenuButton(id, text, func, x, y, connections);
+}
+
+function createMenuButtonCons(up, down, left, right) {
+  return {up: up, down: down, left: left, right: right};
+}
+
+function addConsToMenuButton(id, override=true, up, down, left, right) {
+  let newCons = {up: up, down: down, left: left, right: right};
+  for (let c in newCons) {
+    if ((!override && menuButtons[id][c] == undefined) || override) {
+      menuButtons[id][c] = newCons[c];
+    }
+  }
+}
+
+function changeMenuButtonText(id, newText) {
+  menuButtons[id].text = newText;
+  changeText(id, newText);
+}
+
+function centerMenuButtonTextX(id) {
+  centerTextX(id);
+  menuButtons[id].x = textObjects[id][0].x;
+}
+
+function destroyMenuButtons() {
+  // Destroys the contents of the menuButtons object.
+  // todo...
+  for (let i in menuButtons) {
+    destroyText(menuButtons[i].id);
+    delete menuButtons[i];
+  }
+}
+
+function createReturnButton(newSceneName, oldSceneName, x, y, cons) {
+  let returnFunc = makeSceneLaunchCallback(newSceneName, oldSceneName);
+  createMenuButton('returnButton', 'Return', returnFunc, x, y, cons)
+}
+
+function createReturnButtonCenterX(newSceneName, oldSceneName, y, cons) {
+  createReturnButton(newSceneName, oldSceneName, centerX - (24) + 4, y, cons);
 }
 
 function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
   // Basically makes the callback used for launching a new scene, deleting
   // the current scene's menu elements, and stopping the current scene.
   return () => {
+    console.log('test');
     menuCursor.destroy();
-    destroyMenuElements();
+    destroyMenuButtons();
     destroyAllText();
     parentThis.scene.launch(newSceneName);
     parentThis.scene.stop(oldSceneName);
   };
 }
 
-function createSceneMenuCursor() {
+function createSceneMenuCursor(startingButtonId) {
   let menuCursorArgs = [
     parentThis,
-    textObjects[menuElements[0][1]][0].x-10,
-    textObjects[menuElements[0][1]][0].y,
+    menuButtons[startingButtonId].x,
+    menuButtons[startingButtonId].y,
     'menuCursor',
-    menuElements
+    startingButtonId
   ];
   return new menuCursorClass(...menuCursorArgs);
 }
@@ -958,8 +1282,8 @@ function destroyText(textId) {
 
 function destroyAllText() {
   // Removes and destroys ALL text elements in the textObjects array.
-  for (let i in textObjects) {
-    destroyText(i);
+  for (let key in textObjects) {
+    destroyText(key);
   }
 }
 
@@ -1118,47 +1442,39 @@ function getValidGrassSpawnAreas() {
 // Class and methods for the menu cursor.
 
 class menuCursorClass extends Phaser.GameObjects.Image {
-  constructor(scene, x, y, texture, menuElems, frame) {
+  constructor(scene, x, y, texture, startingButtonId, frame) {
     super(scene, x, y, texture, frame);
-    this.position = 0;
+    this.buttonSelected = startingButtonId;
+    // buttonSelected will be the ID of the menu button it is currently on.
+    // This ID is also equivalent to the textobject ID of the text 
+    // associated with the button.
     this.canUse = true;
-    this.update = () => {  // Updates the cursor position upon input.
+    let directions = ['up', 'down', 'left', 'right'];
+    this.update = () => {
       if (this.canUse) {
-        let lastElemX = textObjects[menuElems[this.position][1]][0].x-10;
-        if (lastElemX != this.x) {
-          this.x = lastElemX;
+        let lastButtonXCoord = textObjects[this.buttonSelected][0].x - 10;
+        if (lastButtonXCoord != this.x) {
+          this.x = lastButtonXCoord;
         }
-        // lastElemX is for when the text for the menu element changes.
-        // If the X coordinate of the leftmost letter minus 10 (cursor offset)
-        // does not equal the current cursor coordinate, then
+        // lastButtonXCoord is for when the text of the currently selected
+        // button changes. If the X coordinate of the leftmost letter minus 10
+        // (cursor offset) does not equal the current cursor coord, then
         // it will update it.
-        let lastPos = this.position;
-        // lastPos is for updating the cursor's x/y coords when 
-        // thge cursor's "position" property changes.
-        if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-          if (this.position + 1 < menuElems.length) {
-            this.position++;
+        for (let dir of directions) {
+          if (Phaser.Input.Keyboard.JustDown(cursors[dir])) {
+            if (Boolean(menuButtons[this.buttonSelected][dir])) {
+              this.buttonSelected = menuButtons[this.buttonSelected][dir];
+              //console.log('The current button selected is:');
+              //console.log(menuButtons[this.buttonSelected]);
+              this.x = menuButtons[this.buttonSelected].x - 10;
+              this.y = menuButtons[this.buttonSelected].y;
+            }
           }
-          else {
-            this.position = 0;
-          }
-        }
-        else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-          if (this.position - 1 > -1) {
-            this.position--
-          }
-          else {
-            this.position = menuElems.length - 1;
-          }
-        }
-        if (lastPos != this.position) {
-          this.y = menuElems[this.position][0];
-          this.x = textObjects[menuElems[this.position][1]][0].x-10;
         }
         let startDown = Phaser.Input.Keyboard.JustDown(cursors.start);
         let aDown = Phaser.Input.Keyboard.JustDown(cursors.a);
         if (startDown || aDown) {
-          menuElems[this.position][2]();
+          menuButtons[this.buttonSelected].func();
         }
       }
     };
@@ -2247,13 +2563,15 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene, keyBindingScene, mainScene,
-    scoresScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
+    loadingScene, titleScene, levelIntroScene, keyBindingScene,
+    mainScene, scoresScene, pausedScene, optionsMenuScene,
+    creditsScene, gameOverScene, nameEnteringScene, scoreSubmittedScene
   ]
 };
 
 // -- Global variables: -- //
 
+let quitGame = () => nw.App.quit();
 let centerX = config.width/2;
 let centerY = config.height/2;
 let coins;
@@ -2263,6 +2581,7 @@ let cursorsPaused;
 let paused = false;
 let parentThis;
 let randBool = true;
+let enteredName = '';
 
 let codeKeys = {};
 for (let key in Phaser.Input.Keyboard.KeyCodes) {
@@ -2278,8 +2597,7 @@ let textObjects = {};  // Object for storing the displayed texts.
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
 
-let menuElements = [];  // Array for storing menu elements.
-// Elements are stored in their sequential order.
+let menuButtons = {};  // Object for storing menu buttons.
 
 // Array used for storing and iterating over the alive enemies for their AI:
 let enemiesAlive = [];
@@ -2328,11 +2646,10 @@ function resetGlobalVars() {
   cursorsPaused = undefined;
   paused = false;
   randBool = true;
-  for (let key in textObjects) {
-    destroyText(key);
-  }
-  textObjects = {};
-  menuElements = [];
+  destroyAllText();
+  console.log(textObjects);
+  destroyMenuButtons();
+  console.log(menuButtons);
 
   totalEnemiesSpawned = 0;
   enemySpawnpoints = [];
@@ -2342,6 +2659,7 @@ function resetGlobalVars() {
   currentLevel = undefined;
   levelNumber = 0;
   lastLevelHealth = 3;
+  gameOverTriggered = false;
 
   spawnEnemies = true;
   canPause = true;

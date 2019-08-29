@@ -11,13 +11,15 @@ let config = {
     }
   },
   scene: [
-    loadingScene, titleScene, levelIntroScene, keyBindingScene, mainScene,
-    scoresScene, pausedScene, optionsMenuScene, creditsScene, gameOverScene
+    loadingScene, titleScene, levelIntroScene, keyBindingScene,
+    mainScene, scoresScene, pausedScene, optionsMenuScene,
+    creditsScene, gameOverScene, nameEnteringScene, scoreSubmittedScene
   ]
 };
 
 // -- Global variables: -- //
 
+let quitGame = () => nw.App.quit();
 let centerX = config.width/2;
 let centerY = config.height/2;
 let coins;
@@ -27,6 +29,7 @@ let cursorsPaused;
 let paused = false;
 let parentThis;
 let randBool = true;
+let enteredName = '';
 
 let codeKeys = {};
 for (let key in Phaser.Input.Keyboard.KeyCodes) {
@@ -42,8 +45,7 @@ let textObjects = {};  // Object for storing the displayed texts.
 // has no effect on the image objects. 
 // To delete a single letter, use destroy().
 
-let menuElements = [];  // Array for storing menu elements.
-// Elements are stored in their sequential order.
+let menuButtons = {};  // Object for storing menu buttons.
 
 // Array used for storing and iterating over the alive enemies for their AI:
 let enemiesAlive = [];
@@ -92,11 +94,10 @@ function resetGlobalVars() {
   cursorsPaused = undefined;
   paused = false;
   randBool = true;
-  for (let key in textObjects) {
-    destroyText(key);
-  }
-  textObjects = {};
-  menuElements = [];
+  destroyAllText();
+  console.log(textObjects);
+  destroyMenuButtons();
+  console.log(menuButtons);
 
   totalEnemiesSpawned = 0;
   enemySpawnpoints = [];
@@ -106,6 +107,7 @@ function resetGlobalVars() {
   currentLevel = undefined;
   levelNumber = 0;
   lastLevelHealth = 3;
+  gameOverTriggered = false;
 
   spawnEnemies = true;
   canPause = true;

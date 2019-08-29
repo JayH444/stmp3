@@ -24,24 +24,25 @@ function gameOverCreate() {
     parentThis.scene.stop('gameOverScene');    
   }, 3000);*/
 
-  let saveScoreFunc = () => {
-    let name = 'TESTA';
-    scores[name] = totalScore;
-    let data = JSON.stringify(scores, null, 2);
-    fs.writeFileSync('./root/dist/scores.json', data);
-    totalScore = 0;
-  }
-
   let toTitle = makeSceneLaunchCallback('titleScene', 'gameOverScene');
   let returnFunc = () => {
     totalScore = 0;
     toTitle();
   };
-  addMenuElementCenterX('Continue', returnFunc, 'continueText', centerY+72);
+  let cbArgs = [
+    'continueButton', 'Continue', returnFunc, centerY + 72,
+    createMenuButtonCons('saveButton', 'saveButton')
+  ];
+  createMenuButtonCenterX(...cbArgs);
 
-  addMenuElementCenterX('Save Score', saveScoreFunc, 'saveScoreText', centerY+56);
+  let saveFunc = makeSceneLaunchCallback('nameEnteringScene', 'gameOverScene');
+  let ssbArgs = [
+    'saveButton', 'Save Score', saveFunc, centerY + 56,
+    createMenuButtonCons('continueButton', 'continueButton')
+  ];
+  createMenuButtonCenterX(...ssbArgs);
 
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('continueButton');
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);
 

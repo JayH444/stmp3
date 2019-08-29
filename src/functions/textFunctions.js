@@ -74,7 +74,7 @@ function destroyText(textId) {
 
 function destroyAllText() {
   // Removes and destroys ALL text elements in the textObjects array.
-  for (let i in textObjects) {
-    destroyText(i);
+  for (let key in textObjects) {
+    destroyText(key);
   }
 }

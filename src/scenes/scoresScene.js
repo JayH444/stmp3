@@ -18,7 +18,7 @@ function scoresCreate() {
 
   console.log(scores);
 
-  let offset = -48;
+  let offset = -56;
   let scoresSorted = [...Object.keys(scores)].sort((a, b) => scores[b] - scores[a]);
   console.log(scoresSorted);
   for (let score of scoresSorted) {
@@ -28,12 +28,9 @@ function scoresCreate() {
   }
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'scoresScene');
-  let deleteReturn = () => {
-    returnFunc();
-  };
-  addMenuElementCenterX('Return', returnFunc, 'returnScoreText', centerY + 72);
+  createMenuButtonCenterX('returnButton', 'Return', returnFunc, centerY+72);
 
-  window.menuCursor = createSceneMenuCursor();
+  window.menuCursor = createSceneMenuCursor('returnButton');
 
   // This creates the scene keybinds:
   cursors = this.input.keyboard.addKeys(keyBinds);

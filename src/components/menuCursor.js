@@ -1,47 +1,39 @@
 // Class and methods for the menu cursor.
 
 class menuCursorClass extends Phaser.GameObjects.Image {
-  constructor(scene, x, y, texture, menuElems, frame) {
+  constructor(scene, x, y, texture, startingButtonId, frame) {
     super(scene, x, y, texture, frame);
-    this.position = 0;
+    this.buttonSelected = startingButtonId;
+    // buttonSelected will be the ID of the menu button it is currently on.
+    // This ID is also equivalent to the textobject ID of the text 
+    // associated with the button.
     this.canUse = true;
-    this.update = () => {  // Updates the cursor position upon input.
+    let directions = ['up', 'down', 'left', 'right'];
+    this.update = () => {
       if (this.canUse) {
-        let lastElemX = textObjects[menuElems[this.position][1]][0].x-10;
-        if (lastElemX != this.x) {
-          this.x = lastElemX;
+        let lastButtonXCoord = textObjects[this.buttonSelected][0].x - 10;
+        if (lastButtonXCoord != this.x) {
+          this.x = lastButtonXCoord;
         }
-        // lastElemX is for when the text for the menu element changes.
-        // If the X coordinate of the leftmost letter minus 10 (cursor offset)
-        // does not equal the current cursor coordinate, then
+        // lastButtonXCoord is for when the text of the currently selected
+        // button changes. If the X coordinate of the leftmost letter minus 10
+        // (cursor offset) does not equal the current cursor coord, then
         // it will update it.
-        let lastPos = this.position;
-        // lastPos is for updating the cursor's x/y coords when 
-        // thge cursor's "position" property changes.
-        if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
-          if (this.position + 1 < menuElems.length) {
-            this.position++;
+        for (let dir of directions) {
+          if (Phaser.Input.Keyboard.JustDown(cursors[dir])) {
+            if (Boolean(menuButtons[this.buttonSelected][dir])) {
+              this.buttonSelected = menuButtons[this.buttonSelected][dir];
+              //console.log('The current button selected is:');
+              //console.log(menuButtons[this.buttonSelected]);
+              this.x = menuButtons[this.buttonSelected].x - 10;
+              this.y = menuButtons[this.buttonSelected].y;
+            }
           }
-          else {
-            this.position = 0;
-          }
-        }
-        else if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
-          if (this.position - 1 > -1) {
-            this.position--
-          }
-          else {
-            this.position = menuElems.length - 1;
-          }
-        }
-        if (lastPos != this.position) {
-          this.y = menuElems[this.position][0];
-          this.x = textObjects[menuElems[this.position][1]][0].x-10;
         }
         let startDown = Phaser.Input.Keyboard.JustDown(cursors.start);
         let aDown = Phaser.Input.Keyboard.JustDown(cursors.a);
         if (startDown || aDown) {
-          menuElems[this.position][2]();
+          menuButtons[this.buttonSelected].func();
         }
       }
     };
