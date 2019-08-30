@@ -1,9 +1,3 @@
-/*function addMenuElementCenterX(str, func, id, y) {
-  // Adds a centered menu option to the valid menu positions array.
-  menuElements.push([y, id, func]);
-  printTextCenter(str, id, y);
-}*/
-
 function addMenuButtonObject(buttonObj) {
   // A button object has the following properties:
   // id, text, func, x, y, and its connections for a given key press.
@@ -27,14 +21,14 @@ function createMenuButton(id, text, func, x, y, connections) {
   addMenuButtonObject(mbObject);
 }
 
-function createMenuButtonCenterX(id, text, func, y, connections) {
+function createMenuButtonCenterX(id, text, func, y, cons) {
   let x = centerX - (text.length*8/2) + 4;
-  createMenuButton(id, text, func, x, y, connections);
+  createMenuButton(id, text, func, x, y, cons);
 }
 
-function createMenuButtonOffsetCenterX(id, text, func, xOffset, y, connections) {
+function createMenuButtonOffsetCenterX(id, text, func, xOffset, y, cons) {
   let x = (centerX - (text.length*8/2) + 4) + xOffset;
-  createMenuButton(id, text, func, x, y, connections);
+  createMenuButton(id, text, func, x, y, cons);
 }
 
 function createMenuButtonCons(up, down, left, right) {
@@ -82,7 +76,6 @@ function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
   // Basically makes the callback used for launching a new scene, deleting
   // the current scene's menu elements, and stopping the current scene.
   return () => {
-    console.log('test');
     menuCursor.destroy();
     destroyMenuButtons();
     destroyAllText();

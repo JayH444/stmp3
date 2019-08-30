@@ -63,8 +63,6 @@ function updateText(textId, getText) {
 
 function destroyText(textId) {
   // Removes a text element.
-  /*console.log(textId);
-  console.log(textObjects[textId]);*/
   for (let i of textObjects[textId]) {
     i.destroy();
   }

@@ -15,30 +15,14 @@ function titlePreload() {
 function titleCreate() {
   parentThis = this;
 
-  let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
-  let signature = this.add.image(config.width-16, config.height-7, 'signature');
-
-
-  /* let playFunc = makeSceneLaunchCallback('levelIntroScene');
-  let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
-  let scoresFunc = makeSceneLaunchCallback('scoresScene');
-  let creditsFunc = makeSceneLaunchCallback('creditsScene');
-  let quitFunc = () => {
-    nw.App.quit();
-  };
-
-  addMenuElementCenterX('Play', playFunc, 'playText', centerY - 4);
-  addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
-  addMenuElementCenterX('Scores', scoresFunc, 'scoresText', centerY + 28);
-  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 44);
-  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);*/
-  
-  // Button name abbreviation + Cons = The connections of that button
-  // for the given keypresses.
-
-  /*let pbCons = createMenuButtonCons('scoresButton', 'optionsButton');
-  let playFunc = makeSceneLaunchCallback('levelIntroScene');
-  createMenuButtonCenterX('playButton', 'Play', playFunc, centerY - 4, pbCons);*/
+  let gtArgs = [
+    centerX, centerY-60, 'gameLogo'
+  ];
+  let gameTitle = this.add.image(...gtArgs);
+  let sigArgs = [
+    config.width-16, config.height-7, 'signature'
+  ];
+  let signature = this.add.image(...sigArgs);
 
   let mbIDs = [
     'playButton',

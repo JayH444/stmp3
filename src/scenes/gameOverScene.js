@@ -18,11 +18,6 @@ function gameOverCreate() {
   resetGlobalVars()
   printTextCenter('Game Over', 'gameOverText', centerY-8);
   printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
-  /*totalScore = 0;
-  setTimeout(() => {
-    parentThis.scene.launch('titleScene');
-    parentThis.scene.stop('gameOverScene');    
-  }, 3000);*/
 
   let toTitle = makeSceneLaunchCallback('titleScene', 'gameOverScene');
   let returnFunc = () => {

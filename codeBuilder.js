@@ -49,7 +49,7 @@ function fetchjsFiles(dir) {
   return res;
 }
 
-function runCodeBuilder(jsFiles, minify=false) {
+function runCodeBuilder(jsFiles, haveSeparators=true, minify=false) {
   // Exactly what it says on the tin. Runs the code builder.
   let concatedScripts = [];
   let output = [];
@@ -62,9 +62,15 @@ function runCodeBuilder(jsFiles, minify=false) {
         output.push(fs.readFileSync(s, 'utf8'));
       }
       else {
-        let start = (`//- ${s} -`).padEnd(79, '/');
-        let end = '/'.repeat(79);
-        let arg = `${start}\n\n${fs.readFileSync(s, 'utf8')}\n\n${end}`;
+        let arg;
+        if (haveSeparators) {
+          let start = (`//- ${s} -`).padEnd(79, '/');
+          let end = '/'.repeat(79);
+          arg = `${start}\n\n${fs.readFileSync(s, 'utf8')}\n\n${end}`;
+        }
+        else {
+          arg = fs.readFileSync(s, 'utf8');
+        }
         output.push(arg);
       }
     }
@@ -122,4 +128,4 @@ function runCodeBuilder(jsFiles, minify=false) {
   }
 }
 
-runCodeBuilder(fetchjsFiles('./src'), minify=false);
+runCodeBuilder(fetchjsFiles('./src'), haveSeparators=false, minify=false);

@@ -16,12 +16,10 @@ function scoresPreload() {
 function scoresCreate() {
   parentThis = this;
 
-  console.log(scores);
-
   let offset = -56;
-  let scoresSorted = [...Object.keys(scores)].sort((a, b) => scores[b] - scores[a]);
-  console.log(scoresSorted);
-  for (let score of scoresSorted) {
+  let scoresKeys = [...Object.keys(scores)]
+  let scoresKeysSorted = scoresKeys.sort((a, b) => scores[b] - scores[a]);
+  for (let score of scoresKeysSorted) {
     let entry = `${score}: ${scores[score].toString().padStart(12, '-')}`
     printTextCenter(entry, score+'playerScore', centerY + offset);
     offset += 12;

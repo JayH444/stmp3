@@ -44,7 +44,6 @@ function nameEnteringCreate() {
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 6; j++) {
       let currCons = [...Array(4)];
-      
       // Conditional statements for the button connections:
 
       // Up
@@ -86,9 +85,6 @@ function nameEnteringCreate() {
     }
   }
 
-  //let returnFunc = makeSceneLaunchCallback('titleScene', 'nameEnteringScene');
-  //addMenuElementCenterX('Return', returnFunc, 'returnScoreText', centerY + 72);
-
   printTextCenter('Enter a name:', 'nameEnteringTitle', 16);
   
   printTextCenter(enteredName.padEnd(5, '_'), 'enteredName', 48);
@@ -98,15 +94,16 @@ function nameEnteringCreate() {
     let displayed = enteredName;
     changeText('enteredName', displayed.padEnd(5, '_'));
   }
-  createMenuButtonOffsetCenterX('eraseButton', 'Erase', eraseButtonFunc, 32, centerY + 56, createMenuButtonCons('8Button', 'returnButton', 'submitButton', 'submitButton'));
-
-  /*let saveScoreFunc = () => {
-    let name = 'TESTA';
-    scores[name] = totalScore;
-    let data = JSON.stringify(scores, null, 2);
-    fs.writeFileSync('./root/dist/scores.json', data);
-    totalScore = 0;
-  }*/
+  let eraseButtonArgs = [
+    'eraseButton', 'Erase', eraseButtonFunc, 32, centerY + 56,
+    createMenuButtonCons(
+      '8Button',
+      'returnButton',
+      'submitButton',
+      'submitButton'
+    )
+  ];
+  createMenuButtonOffsetCenterX(...eraseButtonArgs);
 
   let submitButtonFunc = () => {
     console.log(totalScore);
@@ -128,12 +125,29 @@ function nameEnteringCreate() {
         fs.writeFileSync('./root/dist/scores.json', data);
       }
       totalScore = 0;
+      enteredName = '';
     }
     makeSceneLaunchCallback('scoreSubmittedScene', 'nameEnteringScene')();
   }
-  createMenuButtonOffsetCenterX('submitButton', 'Submit', submitButtonFunc, -32, centerY + 56, createMenuButtonCons('5Button', 'returnButton', 'eraseButton', 'eraseButton'));
+  let submitButtonArgs = [
+    'submitButton', 'Submit', submitButtonFunc, -32, centerY + 56,
+    createMenuButtonCons(
+      '5Button',
+      'returnButton',
+      'eraseButton',
+      'eraseButton'
+    )
+  ];
+  createMenuButtonOffsetCenterX(...submitButtonArgs);
 
-  createReturnButtonCenterX('titleScene', 'nameEnteringScene', centerY + 72, createMenuButtonCons('submitButton', 'aButton'));
+  let returnButtonArgs = [
+    'titleScene', 'nameEnteringScene', centerY + 72,
+    createMenuButtonCons(
+      'submitButton',
+      'aButton'
+    )
+  ];
+  createReturnButtonCenterX(...returnButtonArgs);
   changeMenuButtonText('returnButton', 'Cancel & Return');
   centerMenuButtonTextX('returnButton');
 

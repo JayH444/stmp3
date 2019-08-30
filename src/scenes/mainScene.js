@@ -192,7 +192,6 @@ function update() {
     canPause = false;
     gameTimer.timerEvent.paused = true;
     totalScore = player.score;
-    console.log('Game over conditional triggered!');
     setTimeout(() => {
       parentThis.scene.launch('gameOverScene');
       parentThis.scene.stop('mainScene');

@@ -17,7 +17,6 @@ function keyBindingCreate() {
   parentThis = this;
 
   let keyBindIDs = Object.keys(keyBinds);
-  console.log(keyBindIDs);
 
   let offset = 80;
   for (let i of keyBindIDs) {  // Makes all the menu buttons for the keys.
@@ -32,13 +31,10 @@ function keyBindingCreate() {
       menuCursor.canUse = false;
       changeText(currID, `${keyStr}: ...`);
       let callback = (event) => {
-        //console.log(event);
         let oldKeyCode = keyBinds[i];
         keyBinds[i] = event.keyCode;
         parentThis.input.keyboard.removeKey(oldKeyCode);
         cursors = parentThis.input.keyboard.addKeys(keyBinds);
-        //console.log(keyBinds);
-        //console.log(cursors);
         changeText(currID, `${keyStr}: ${codeKeys[keyBinds[i]]}`);
         centerTextX(currID);
         parentThis.input.keyboard.removeListener('keydown');

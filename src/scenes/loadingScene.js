@@ -62,7 +62,6 @@ function loadingPreload() {  // Loads game assets.
   // Loads and automatically names the spritesheets
   for (let file of files) {
     if (/spritesheet/.test(file) && !/font/.test(file)) {
-      console.log(file);
       let pattern = /spritesheet_(\w+)/;
       this.load.spritesheet(file.match(pattern)[1], 'assets/' + file,
         {frameWidth: 16, frameHeight: 16}

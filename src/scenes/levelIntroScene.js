@@ -16,7 +16,8 @@ function levelIntroPreload() {
 
 function levelIntroCreate() {
   parentThis = this;
-  let mapNameProperty = parentThis.cache.tilemap.entries.entries[currentLevel].data.properties[0];
+  let tilemapEntries = parentThis.cache.tilemap.entries.entries;
+  let mapNameProperty = tilemapEntries[currentLevel].data.properties[0];
   let levelName = (mapNameProperty) ? mapNameProperty.value : currentLevel;
   printTextCenter(levelName, 'levelIntroText');
   setTimeout(() => {

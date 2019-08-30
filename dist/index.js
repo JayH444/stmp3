@@ -1,7 +1,5 @@
 'use strict';
 
-//- src\scenes\creditsScene.js -///////////////////////////////////////////////
-
 // Credits scene.
 
 class creditsScene extends Phaser.Scene {
@@ -19,14 +17,14 @@ function creditsPreload() {
 
 function creditsCreate() {
   parentThis = this;
-  printTextCenter('Programming, SFX, & Game Design:', 'creditsText1', centerY-48);
+  let creditsText1 = 'Programming, SFX, & Game Design:';
+  printTextCenter(creditsText1, 'creditsText1', centerY-48);
   printTextCenter('Hexadecane', 'creditsText2', centerY-36);
   printTextCenter('Art assets:', 'creditsText3', centerY-16);
   printTextCenter('surt', 'creditsText4', centerY-4);
   printTextCenter('Created with Phaser 3', 'creditsText5', centerY+16);
 
   let returnFunc = makeSceneLaunchCallback('titleScene', 'creditsScene');
-  //addMenuElementCenterX('Return', returnFunc, 'returnCreditText', centerY+72);
   createMenuButtonCenterX('returnButton', 'Return', returnFunc, centerY+72)
 
   window.menuCursor = createSceneMenuCursor('returnButton');
@@ -39,10 +37,6 @@ function creditsUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\gameOverScene.js -//////////////////////////////////////////////
 
 // Game over scene.
 
@@ -64,11 +58,6 @@ function gameOverCreate() {
   resetGlobalVars()
   printTextCenter('Game Over', 'gameOverText', centerY-8);
   printTextCenter(`Final score: ${totalScore}`, 'finalScoreText', centerY+8);
-  /*totalScore = 0;
-  setTimeout(() => {
-    parentThis.scene.launch('titleScene');
-    parentThis.scene.stop('gameOverScene');    
-  }, 3000);*/
 
   let toTitle = makeSceneLaunchCallback('titleScene', 'gameOverScene');
   let returnFunc = () => {
@@ -99,10 +88,6 @@ function gameOverUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\keyBindingScene.js -////////////////////////////////////////////
 
 // Scene for binding the controls to the game.
 
@@ -123,7 +108,6 @@ function keyBindingCreate() {
   parentThis = this;
 
   let keyBindIDs = Object.keys(keyBinds);
-  console.log(keyBindIDs);
 
   let offset = 80;
   for (let i of keyBindIDs) {  // Makes all the menu buttons for the keys.
@@ -138,13 +122,10 @@ function keyBindingCreate() {
       menuCursor.canUse = false;
       changeText(currID, `${keyStr}: ...`);
       let callback = (event) => {
-        //console.log(event);
         let oldKeyCode = keyBinds[i];
         keyBinds[i] = event.keyCode;
         parentThis.input.keyboard.removeKey(oldKeyCode);
         cursors = parentThis.input.keyboard.addKeys(keyBinds);
-        //console.log(keyBinds);
-        //console.log(cursors);
         changeText(currID, `${keyStr}: ${codeKeys[keyBinds[i]]}`);
         centerTextX(currID);
         parentThis.input.keyboard.removeListener('keydown');
@@ -216,10 +197,6 @@ function keyBindingUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\levelIntroScene.js -////////////////////////////////////////////
 
 // Level intro scene.
 
@@ -239,7 +216,8 @@ function levelIntroPreload() {
 
 function levelIntroCreate() {
   parentThis = this;
-  let mapNameProperty = parentThis.cache.tilemap.entries.entries[currentLevel].data.properties[0];
+  let tilemapEntries = parentThis.cache.tilemap.entries.entries;
+  let mapNameProperty = tilemapEntries[currentLevel].data.properties[0];
   let levelName = (mapNameProperty) ? mapNameProperty.value : currentLevel;
   printTextCenter(levelName, 'levelIntroText');
   setTimeout(() => {
@@ -252,10 +230,6 @@ function levelIntroUpdate() {
   parentThis = this;
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\loadingScene.js -///////////////////////////////////////////////
 
 // Loading screen scene.
 
@@ -321,7 +295,6 @@ function loadingPreload() {  // Loads game assets.
   // Loads and automatically names the spritesheets
   for (let file of files) {
     if (/spritesheet/.test(file) && !/font/.test(file)) {
-      console.log(file);
       let pattern = /spritesheet_(\w+)/;
       this.load.spritesheet(file.match(pattern)[1], 'assets/' + file,
         {frameWidth: 16, frameHeight: 16}
@@ -389,10 +362,6 @@ function loadingUpdate() {
   };
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\mainScene.js -//////////////////////////////////////////////////
 
 // Main game scene and game loop.
 
@@ -588,7 +557,6 @@ function update() {
     canPause = false;
     gameTimer.timerEvent.paused = true;
     totalScore = player.score;
-    console.log('Game over conditional triggered!');
     setTimeout(() => {
       parentThis.scene.launch('gameOverScene');
       parentThis.scene.stop('mainScene');
@@ -624,10 +592,6 @@ function update() {
 
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\nameEnteringScene.js -//////////////////////////////////////////
 
 // Name entering scene.
 
@@ -675,7 +639,6 @@ function nameEnteringCreate() {
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 6; j++) {
       let currCons = [...Array(4)];
-      
       // Conditional statements for the button connections:
 
       // Up
@@ -717,9 +680,6 @@ function nameEnteringCreate() {
     }
   }
 
-  //let returnFunc = makeSceneLaunchCallback('titleScene', 'nameEnteringScene');
-  //addMenuElementCenterX('Return', returnFunc, 'returnScoreText', centerY + 72);
-
   printTextCenter('Enter a name:', 'nameEnteringTitle', 16);
   
   printTextCenter(enteredName.padEnd(5, '_'), 'enteredName', 48);
@@ -729,37 +689,60 @@ function nameEnteringCreate() {
     let displayed = enteredName;
     changeText('enteredName', displayed.padEnd(5, '_'));
   }
-  createMenuButtonOffsetCenterX('eraseButton', 'Erase', eraseButtonFunc, 32, centerY + 56, createMenuButtonCons('8Button', 'returnButton', 'submitButton', 'submitButton'));
-
-  /*let saveScoreFunc = () => {
-    let name = 'TESTA';
-    scores[name] = totalScore;
-    let data = JSON.stringify(scores, null, 2);
-    fs.writeFileSync('./root/dist/scores.json', data);
-    totalScore = 0;
-  }*/
+  let eraseButtonArgs = [
+    'eraseButton', 'Erase', eraseButtonFunc, 32, centerY + 56,
+    createMenuButtonCons(
+      '8Button',
+      'returnButton',
+      'submitButton',
+      'submitButton'
+    )
+  ];
+  createMenuButtonOffsetCenterX(...eraseButtonArgs);
 
   let submitButtonFunc = () => {
     console.log(totalScore);
     if (enteredName.length == 5) {
-      let minScoreName = null;
-      for (let name in scores) {
-        if (minScoreName == null || scores[name] < scores[minScoreName]) {
-          minScoreName = name;
-        }
+      if (scores.hasOwnProperty(enteredName)) {
+        scores[enteredName] = totalScore;
       }
-      console.log(`Replacing ${minScoreName}...`);
-      delete scores[minScoreName];
-      scores[enteredName] = totalScore;
-      let data = JSON.stringify(scores, null, 2);
-      fs.writeFileSync('./root/dist/scores.json', data);
+      else {
+        let minScoreName = null;
+        for (let name in scores) {
+          if (minScoreName == null || scores[name] < scores[minScoreName]) {
+            minScoreName = name;
+          }
+        }
+        console.log(`Replacing ${minScoreName}...`);
+        delete scores[minScoreName];
+        scores[enteredName] = totalScore;
+        let data = JSON.stringify(scores, null, 2);
+        fs.writeFileSync('./root/dist/scores.json', data);
+      }
       totalScore = 0;
+      enteredName = '';
     }
     makeSceneLaunchCallback('scoreSubmittedScene', 'nameEnteringScene')();
   }
-  createMenuButtonOffsetCenterX('submitButton', 'Submit', submitButtonFunc, -32, centerY + 56, createMenuButtonCons('5Button', 'returnButton', 'eraseButton', 'eraseButton'));
+  let submitButtonArgs = [
+    'submitButton', 'Submit', submitButtonFunc, -32, centerY + 56,
+    createMenuButtonCons(
+      '5Button',
+      'returnButton',
+      'eraseButton',
+      'eraseButton'
+    )
+  ];
+  createMenuButtonOffsetCenterX(...submitButtonArgs);
 
-  createReturnButtonCenterX('titleScene', 'nameEnteringScene', centerY + 72, createMenuButtonCons('submitButton', 'aButton'));
+  let returnButtonArgs = [
+    'titleScene', 'nameEnteringScene', centerY + 72,
+    createMenuButtonCons(
+      'submitButton',
+      'aButton'
+    )
+  ];
+  createReturnButtonCenterX(...returnButtonArgs);
   changeMenuButtonText('returnButton', 'Cancel & Return');
   centerMenuButtonTextX('returnButton');
 
@@ -774,10 +757,6 @@ function nameEnteringUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\optionsMenuScene.js -///////////////////////////////////////////
 
 // Options menu scene.
 
@@ -831,10 +810,6 @@ function optionsMenuUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\pausedScene.js -////////////////////////////////////////////////
 
 // Scene for when the game is paused.
 
@@ -877,10 +852,6 @@ class pausedScene extends Phaser.Scene {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\scoresScene.js -////////////////////////////////////////////////
 
 // Scores scene.
 
@@ -900,12 +871,10 @@ function scoresPreload() {
 function scoresCreate() {
   parentThis = this;
 
-  console.log(scores);
-
   let offset = -56;
-  let scoresSorted = [...Object.keys(scores)].sort((a, b) => scores[b] - scores[a]);
-  console.log(scoresSorted);
-  for (let score of scoresSorted) {
+  let scoresKeys = [...Object.keys(scores)]
+  let scoresKeysSorted = scoresKeys.sort((a, b) => scores[b] - scores[a]);
+  for (let score of scoresKeysSorted) {
     let entry = `${score}: ${scores[score].toString().padStart(12, '-')}`
     printTextCenter(entry, score+'playerScore', centerY + offset);
     offset += 12;
@@ -925,10 +894,6 @@ function scoresUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\scoreSubmittedScene.js -////////////////////////////////////////
 
 // Score submitted scene.
 
@@ -958,10 +923,6 @@ class scoreSubmittedScene extends Phaser.Scene {
     parentThis = this;
   }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\scenes\titleScene.js -/////////////////////////////////////////////////
 
 // Title scene.
 
@@ -980,30 +941,14 @@ function titlePreload() {
 function titleCreate() {
   parentThis = this;
 
-  let gameTitle = this.add.image(centerX, centerY-60, 'gameLogo');
-  let signature = this.add.image(config.width-16, config.height-7, 'signature');
-
-
-  /* let playFunc = makeSceneLaunchCallback('levelIntroScene');
-  let optionsFunc = makeSceneLaunchCallback('optionsMenuScene');
-  let scoresFunc = makeSceneLaunchCallback('scoresScene');
-  let creditsFunc = makeSceneLaunchCallback('creditsScene');
-  let quitFunc = () => {
-    nw.App.quit();
-  };
-
-  addMenuElementCenterX('Play', playFunc, 'playText', centerY - 4);
-  addMenuElementCenterX('Options', optionsFunc, 'optionText', centerY + 12);
-  addMenuElementCenterX('Scores', scoresFunc, 'scoresText', centerY + 28);
-  addMenuElementCenterX('Credits', creditsFunc, 'creditsText', centerY + 44);
-  addMenuElementCenterX('Quit', quitFunc, 'quitText', centerY + 60);*/
-  
-  // Button name abbreviation + Cons = The connections of that button
-  // for the given keypresses.
-
-  /*let pbCons = createMenuButtonCons('scoresButton', 'optionsButton');
-  let playFunc = makeSceneLaunchCallback('levelIntroScene');
-  createMenuButtonCenterX('playButton', 'Play', playFunc, centerY - 4, pbCons);*/
+  let gtArgs = [
+    centerX, centerY-60, 'gameLogo'
+  ];
+  let gameTitle = this.add.image(...gtArgs);
+  let sigArgs = [
+    config.width-16, config.height-7, 'signature'
+  ];
+  let signature = this.add.image(...sigArgs);
 
   let mbIDs = [
     'playButton',
@@ -1048,10 +993,6 @@ function titleUpdate() {
   menuCursor.update();
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\functions\levelFunctions.js -//////////////////////////////////////////
 
 function resetGlobalVarsForLevelAdvance(willAdvance=true) {
   let nextLevel = levelNumber;
@@ -1074,10 +1015,6 @@ function completeLevel(willAdvance=true) {
   }, 3000);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\functions\mathFunctions.js -///////////////////////////////////////////
 
 // Math-related functions.
 
@@ -1092,16 +1029,6 @@ function pickRandomSprite(arr) {
   return Phaser.Math.RND.pick(arr);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\functions\menuButtonFunctions.js -/////////////////////////////////////
-
-/*function addMenuElementCenterX(str, func, id, y) {
-  // Adds a centered menu option to the valid menu positions array.
-  menuElements.push([y, id, func]);
-  printTextCenter(str, id, y);
-}*/
 
 function addMenuButtonObject(buttonObj) {
   // A button object has the following properties:
@@ -1126,14 +1053,14 @@ function createMenuButton(id, text, func, x, y, connections) {
   addMenuButtonObject(mbObject);
 }
 
-function createMenuButtonCenterX(id, text, func, y, connections) {
+function createMenuButtonCenterX(id, text, func, y, cons) {
   let x = centerX - (text.length*8/2) + 4;
-  createMenuButton(id, text, func, x, y, connections);
+  createMenuButton(id, text, func, x, y, cons);
 }
 
-function createMenuButtonOffsetCenterX(id, text, func, xOffset, y, connections) {
+function createMenuButtonOffsetCenterX(id, text, func, xOffset, y, cons) {
   let x = (centerX - (text.length*8/2) + 4) + xOffset;
-  createMenuButton(id, text, func, x, y, connections);
+  createMenuButton(id, text, func, x, y, cons);
 }
 
 function createMenuButtonCons(up, down, left, right) {
@@ -1181,7 +1108,6 @@ function makeSceneLaunchCallback(newSceneName, oldSceneName='titleScene') {
   // Basically makes the callback used for launching a new scene, deleting
   // the current scene's menu elements, and stopping the current scene.
   return () => {
-    console.log('test');
     menuCursor.destroy();
     destroyMenuButtons();
     destroyAllText();
@@ -1201,10 +1127,6 @@ function createSceneMenuCursor(startingButtonId) {
   return new menuCursorClass(...menuCursorArgs);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\functions\textFunctions.js -///////////////////////////////////////////
 
 // Functions for image-based text creation
 
@@ -1271,8 +1193,6 @@ function updateText(textId, getText) {
 
 function destroyText(textId) {
   // Removes a text element.
-  /*console.log(textId);
-  console.log(textObjects[textId]);*/
   for (let i of textObjects[textId]) {
     i.destroy();
   }
@@ -1287,10 +1207,6 @@ function destroyAllText() {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\components\enemyManager.js -///////////////////////////////////////////
 
 class EnemyManagerClass {
   constructor(enemyCountMinimum=12, enemyCountRange=13) {
@@ -1312,10 +1228,6 @@ class EnemyManagerClass {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\components\gameTimer.js -//////////////////////////////////////////////
 
 class gameTimerClass {
   // Class for the game timer and its properties and methods.
@@ -1365,10 +1277,6 @@ class gameTimerClass {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\components\levelLoader.js -////////////////////////////////////////////
 
 function loadLevelTilesheets() {
   // Loads the level tilesheets of the game in the "levels" folder, and
@@ -1434,10 +1342,6 @@ function getValidGrassSpawnAreas() {
 }
 
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\components\menuCursor.js -/////////////////////////////////////////////
 
 // Class and methods for the menu cursor.
 
@@ -1482,10 +1386,6 @@ class menuCursorClass extends Phaser.GameObjects.Image {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\components\soundManager.js -///////////////////////////////////////////
 
 // Class and methods for the sound manager.
 // This is mainly for preventing multiple sounds playing 
@@ -1507,10 +1407,6 @@ class soundManagerClass {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\actors\genericActor.js -///////////////////////////////////////////////
 
 class Actor extends Phaser.Physics.Arcade.Sprite {
   // Constructor function "class" for creating an actor 
@@ -1737,10 +1633,6 @@ class Actor extends Phaser.Physics.Arcade.Sprite {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\actors\enemyActor.js -/////////////////////////////////////////////////
 
 class enemyActor extends Actor {
   // Creates a acidBug.
@@ -1816,10 +1708,6 @@ class enemyActor extends Actor {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\actors\acidBugActor.js -///////////////////////////////////////////////
 
 class AcidBug extends enemyActor {
   // Creates an acidBug.
@@ -2014,10 +1902,6 @@ function CreateRandomAcidBug() {
   new AcidBug(parentThis, x, y);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\actors\batActor.js -///////////////////////////////////////////////////
 
 class Bat extends enemyActor {
   // Creates a bat.
@@ -2196,10 +2080,6 @@ function CreateRandomBat() {
   new Bat(parentThis, x, y);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\actors\playerActor.js -////////////////////////////////////////////////
 
 class Player extends Actor {
   // Creates a this.
@@ -2349,10 +2229,6 @@ class Player extends Actor {
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\actors\zombieActor.js -////////////////////////////////////////////////
 
 class Zombie extends enemyActor {
   // Creates a zombie.
@@ -2501,10 +2377,6 @@ function CreateRandomZombie() {
   new Zombie(parentThis, x, y);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\pickupables\genericPickupable.js -/////////////////////////////////////
 
 // Array for storing the pickupables:
 let pickupables = [];
@@ -2545,10 +2417,6 @@ function mixinPickupableMethods(p, sprite, destructTime) {
 
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-
-//- src\main.js -//////////////////////////////////////////////////////////////
 
 let config = {
   type: Phaser.WEBGL,
@@ -2647,9 +2515,7 @@ function resetGlobalVars() {
   paused = false;
   randBool = true;
   destroyAllText();
-  console.log(textObjects);
   destroyMenuButtons();
-  console.log(menuButtons);
 
   totalEnemiesSpawned = 0;
   enemySpawnpoints = [];
@@ -2664,6 +2530,3 @@ function resetGlobalVars() {
   spawnEnemies = true;
   canPause = true;
 }
-
-
-///////////////////////////////////////////////////////////////////////////////

@@ -95,9 +95,7 @@ function resetGlobalVars() {
   paused = false;
   randBool = true;
   destroyAllText();
-  console.log(textObjects);
   destroyMenuButtons();
-  console.log(menuButtons);
 
   totalEnemiesSpawned = 0;
   enemySpawnpoints = [];
