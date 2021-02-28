@@ -6,13 +6,14 @@ This is an action-platformer punch-'em-up I wrote in 2019 using HTML5/CSS/JS, re
 
 ## How to Play (Default controls)
 
-Move up: W
-Move left: A
-Move down: S
-Move right: D
+Move up: W  
+Move left: A  
+Move down: S  
+Move right: D  
 Jump: Space  
 Punch: Ctrl  
 Pause: P  
+
 
 
 Created with Phaser.js: https://phaser.io  
